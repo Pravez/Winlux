@@ -6,7 +6,8 @@
 
 thread_t thread_self(void)
 {
-
+  tthread_t * current = queue__get();
+  return (thread_t) current;
 }
 
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
@@ -14,9 +15,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
 }
 
 int thread_yield(void){
-	tthread_t actual = pop();
+	tthread_t * actual = pop();
 	push_back(actual);
-	swap_context(second()._context, first()._context);		
+	swap_context(second()._context, first()._context);
 }
 
 
