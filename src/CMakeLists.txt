@@ -8,5 +8,5 @@ set(EXAMPLE_SOURCES contextes.c)
 add_executable(Contextes ${EXAMPLE_SOURCES})
 target_link_libraries(Example ${CMAKE_THREAD_LIBS_INIT})
 
-set(PROJECT_SOURCE context.c context.h queue/queue.h main.c queue/o_queue.h)
+set(PROJECT_SOURCE context.c context.h queue/queue.h main.c queue/o_queue.h queue/o_queue.c)
 add_executable(Project ${PROJECT_SOURCE})
