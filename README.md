@@ -1,8 +1,7 @@
-# ProjetSysteme
+# ProjetSysteme - Winlux
 
-### Composition de l'équipe
-
-- Chloé BELGUERMI
-- Paul BRETON
-- Raphaël TAPIA
-- Nicolas VIDAL
+#Contributors
+Belguermi Chloé
+Breton Paul
+Tapia Raphaël
+Vidal Nicolas
