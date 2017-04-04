@@ -3,7 +3,7 @@
 
 
 struct tthread_t* tthread_init(){
-    struct tthread_t* tthread = malloc(sizeof(struct tthread));
+    struct tthread_t* tthread = malloc(sizeof(struct tthread_t));
 
 
     return tthread;
