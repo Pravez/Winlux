@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <ucontext.h> /* ne compile pas avec -std=c89 ou -std=c99 */
 
+int prout;
+
 void func(int numero)
 {
-  printf("j'affiche le numéro %d\n", numero);
+  printf("j'affiche le numéro %d\n%d\n", numero, prout);
+  prout = 6;
 }
 
 int main() {
@@ -13,6 +16,8 @@ int main() {
   getcontext(&uc); /* initialisation de uc avec valeurs coherentes
 		    * (pour éviter de tout remplir a la main ci-dessous) */
 
+  prout = 2;
+
   uc.uc_stack.ss_size = 64*1024;
   uc.uc_stack.ss_sp = malloc(uc.uc_stack.ss_size);
   uc.uc_link = &previous;
@@ -20,12 +25,13 @@ int main() {
 
   printf("je suis dans le main\n");
   swapcontext(&previous, &uc);
-  printf("je suis revenu dans le main\n");
+  printf("je suis revenu dans le main\n%d\n");
 
   uc.uc_stack.ss_size = 64*1024;
   uc.uc_stack.ss_sp = malloc(uc.uc_stack.ss_size);
   uc.uc_link = NULL;
   makecontext(&uc, (void (*)(void)) func, 1, 57);
+  prout = 5;
 
   printf("je suis dans le main\n");
   setcontext(&uc);
