@@ -1,13 +1,19 @@
 #include <errno.h>
-#include "queue.h"
-#include "o_queue.h"
+#include <tclDecls.h>
+#include <stdio.h>
+#include "queue/o_queue.h"
+#include "thread.h"
+#include "context.h"
+#include <ucontext.h>
 //push_back, pop, get
+
+#define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 
 
 thread_t thread_self(void)
 {
-  tthread_t * current = queue__get();
-  return (thread_t) current;
+    struct tthread_t * current = queue__first();
+    return (thread_t) current;
 }
 
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
@@ -15,20 +21,22 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
 }
 
 int thread_yield(void){
-	tthread_t * actual = pop();
-	push_back(actual);
-	swap_context(second()._context, first()._context);
+    struct tthread_t * actual = queue__pop();
+	queue__push_back(actual);
+	swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
 }
 
 
 int thread_join(thread_t thread, void **retval){
+    struct tthread_t* tthread = TO_TTHREAD(thread);
+
 	if (thread == NULL) { //doesn't exist --> error, invalid
 		perror("Error : thread doesn't exist in thread_join");	
 		return 0;
 	}
 	
-	if (thread.status == ACTIVE) {
-		thread.nb_join++; //increment the number of thread that wait the thread
+	if (tthread->_state == ACTIVE) {
+        tthread->_join_wait++; //increment the number of thread that wait the thread
 		thread_yield(); //give the hand
 		int finished = 0;
 		while(finished == 0) {			
@@ -37,7 +45,7 @@ int thread_join(thread_t thread, void **retval){
 				finished = 1;
 			}
 		}
-		thread.nb_join--;
+        tthread->_join_wait--;
 	}
 	else {		
 		return 1;
