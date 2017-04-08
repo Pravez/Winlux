@@ -20,12 +20,12 @@ struct tthread_t* tthread_init(){
 
 void tthread_destroy(struct tthread_t * tthread) {
   free(tthread);
-  VALGRIND_STACK_DEREGISTER(tthread._valgrind_stackid);
+  VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }
 
 
 int cxt_watchdog(struct watchdog_args * args) {
-  int res = getcontext(args->_thread->_context);
+  int res = getcontext(&args->_thread->_context);
   if (res == -1)
     ERROR("impossible to create");
 
@@ -33,7 +33,7 @@ int cxt_watchdog(struct watchdog_args * args) {
   args->_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
   args->_thread->_context.uc_link = &(args->_calling->_context);
 
-  makecontext(&(args->_thread->_context), args->_func, args->_func_arg);
+  makecontext(&(args->_thread->_context), (void (*)(void)) args->_func, (int) args->_func_arg);
 
   // get return value;
 
