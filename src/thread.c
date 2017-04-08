@@ -16,9 +16,12 @@ thread_t thread_self(void)
     return (thread_t) current;
 }
 
-int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg){
 
+int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
+  // create watchdog_args
+  // check if the main has been put in a thread
 }
+
 
 int thread_yield(void){
     struct tthread_t * actual = queue__pop();
@@ -51,6 +54,7 @@ int thread_join(thread_t thread, void **retval){
 		return 1;
 	}
 }
+
 
 void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
 
