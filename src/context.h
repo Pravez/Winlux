@@ -34,6 +34,6 @@ struct watchdog_args {
 
 struct tthread_t* tthread_init();
 void tthread_destroy(struct tthread_t * tthread);
-
+int cxt_watchdog(struct watchdog_args * args);
 
 #endif //FRED_CIE_CONTEXT_H
