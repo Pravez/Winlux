@@ -32,7 +32,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     args._thread->_context.uc_link = current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
-    args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+    args._thread->_context.uc_stack.ss_sp = malloretvalc(STACK_SIZE);
     args._func = func;
     args._func_arg = funcarg;
 
@@ -104,4 +104,5 @@ void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }
+    setcontext(&TO_TTHREAD(&TO_TTHREAD(queue__first())->_context);
 }
