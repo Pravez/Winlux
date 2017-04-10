@@ -18,7 +18,7 @@ enum TTHREAD_STATE{
 
 struct tthread_t{
     ucontext_t _context;
-    void** _retval;
+    void* _retval;
 
     enum TTHREAD_STATE _state;
     struct list* _waiting_threads;
