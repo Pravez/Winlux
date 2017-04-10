@@ -25,28 +25,16 @@ thread_t thread_self(void)
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
   struct watchdog_args args;
 
-<<<<<<< HEAD
-  int res = getcontext(&(args._thread->_context));
-  if (res == -1) {
-    ERROR("impossible get current context");
-    return FAILED;
-  }
-=======
   int res = getcontext(args._thread->_context);
   if (res == -1)
     ERROR("impossible get current context");
->>>>>>> 39ad6b7cacec17f382b2aef1802b82252b3a3a3c
 
   res = getcontext(args._thread->_context.uc_link);
   if (res == -1) {
     ERROR("impossible get current context");
-<<<<<<< HEAD
     return FAILED;
   }
   
-=======
-
->>>>>>> 39ad6b7cacec17f382b2aef1802b82252b3a3a3c
   args._thread->_context.uc_stack.ss_size = STACK_SIZE;
   args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
   args._func = func;
