@@ -46,12 +46,12 @@ int thread_yield(void){
 
 
 int thread_join(thread_t thread, void **retval){
-    struct tthread_t* tthread = TO_TTHREAD(thread);
+    if (thread == NULL) { //doesn't exist --> error, invalid
+        perror("Error : thread doesn't exist in thread_join");
+        return 0;
+    }
 
-	if (thread == NULL) { //doesn't exist --> error, invalid
-		perror("Error : thread doesn't exist in thread_join");	
-		return 0;
-	}
+    struct tthread_t* tthread = TO_TTHREAD(thread);
 	
 	if (tthread->_state == ACTIVE) {
         tthread->_join_wait++; //increment the number of thread that wait the thread

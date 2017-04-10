@@ -17,7 +17,7 @@ struct tthread_t{
     void** _retval;
 
     enum TTHREAD_STATE _state;
-    int _join_wait;
+    struct tthread_t* _waiting_threads;
 
     //For memory purposes
     int _valgrind_stackid;
@@ -34,6 +34,6 @@ struct watchdog_args {
 
 struct tthread_t* tthread_init();
 void tthread_destroy(struct tthread_t * tthread);
-
+int cxt_watchdog(struct watchdog_args * args);
 
 #endif //FRED_CIE_CONTEXT_H
