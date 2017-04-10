@@ -18,7 +18,23 @@ thread_t thread_self(void)
 
 
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
-  // create watchdog_args
+  struct watchdog_args args;
+
+  int res = getcontext(args._thread->_context);
+  if (res == -1)
+    ERROR("impossible get current context");
+
+  int res = getcontext(&(args._thread->_context.uc_link));
+  if (res == -1)
+    ERROR("impossible get current context");
+
+  args._thread->_context.uc_stack.ss_size = STACK_SIZE;
+  args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+  args._func = func;
+  args._func_arg = funcargs;
+
+  makecontext(&(args->_thread->_context), cxt_watchdog, args);
+
   // check if the main has been put in a thread
 }
 
@@ -42,6 +58,7 @@ int thread_join(thread_t thread, void **retval){
         tthread->_join_wait++; //increment the number of thread that wait the thread
 		thread_yield(); //give the hand
 
+
     int i =0;
     while(i < tthread.nb_waiting) {
       if (tthread.waiting[i] == (&TO_TTHREAD(queue__first()))) {
@@ -58,5 +75,7 @@ int thread_join(thread_t thread, void **retval){
 
 
 void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
-
+  struct tthread_t * current = TO_TTHREAD(queue__first());
+  current->retval = &retval; //pass function's retval to calling thread
+  exit(0);
 }
