@@ -1,14 +1,13 @@
 #include <errno.h>
-#include <tclDecls.h>
+//#include <tclDecls.h>
 #include <stdio.h>
+#include <ucontext.h>
 #include "queue/o_queue.h"
 #include "thread.h"
 #include "context.h"
-#include <ucontext.h>
-//push_back, pop, get
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
-
+#define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
 thread_t thread_self(void)
 {
@@ -20,22 +19,31 @@ thread_t thread_self(void)
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
   struct watchdog_args args;
 
-  int res = getcontext(args._thread->_context);
-  if (res == -1)
-    ERROR("impossible get current context");  
-
-  int res = getcontext(&(args._thread->_context.uc_link));
-  if (res == -1)
+  int res = getcontext(&(args._thread->_context));
+  if (res == -1) {
     ERROR("impossible get current context");
+    return FAILED;
+  }
+
+  res = getcontext(args._thread->_context.uc_link);
+  if (res == -1) {
+    ERROR("impossible get current context");
+    return FAILED;
+  }
   
   args._thread->_context.uc_stack.ss_size = STACK_SIZE;
   args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
   args._func = func;
-  args._func_arg = funcargs;
+  args._func_arg = funcarg;
 
-  makecontext(&(args->_thread->_context), cxt_watchdog, args);
+  // need to add the current thread to the list of waiting threads
+  queue__push_back(args._thread);
+
+  makecontext(&(args._thread->_context), cxt_watchdog, 1, &args);
 
   // check if the main has been put in a thread
+
+  return SUCCESS;
 }
 
 

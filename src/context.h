@@ -9,13 +9,15 @@ enum TTHREAD_STATE{
     ACTIVE, SLEEPING
 };
 
-#define STACK_SIZE 64 * 1024
+#define STACK_SIZE 64 * 102
+#define SUCCESS 1
+#define FAILED 0
 
 
 struct tthread_t{
     ucontext_t _context;
     void** _retval;
-
+  
     enum TTHREAD_STATE _state;
     struct tthread_t* _waiting_threads;
 
@@ -25,8 +27,7 @@ struct tthread_t{
 
 
 struct watchdog_args {
-  tthread_t * _thread;
-  //tthread_t * _calling;
+  struct tthread_t * _thread;
   void * (*_func)(void *);
   void * _func_arg;
 };
