@@ -31,28 +31,29 @@ int thread_yield(void){
 
 
 int thread_join(thread_t thread, void **retval){
-    struct tthread_t* tthread = TO_TTHREAD(thread);
-
 	if (thread == NULL) { //doesn't exist --> error, invalid
-		perror("Error : thread doesn't exist in thread_join");	
+		perror("Error : thread doesn't exist in thread_join");
 		return 0;
 	}
-	
+
+  struct tthread_t* tthread = TO_TTHREAD(thread);
+
 	if (tthread->_state == ACTIVE) {
         tthread->_join_wait++; //increment the number of thread that wait the thread
 		thread_yield(); //give the hand
-		int finished = 0;
-		while(finished == 0) {			
-			//attente du signal de fin
-			if (signal) {
-				finished = 1;
-			}
-		}
-        tthread->_join_wait--;
-	}
-	else {		
-		return 1;
-	}
+
+    int i =0;
+    while(i < tthread.nb_waiting) {
+      if (tthread.waiting[i] == (&TO_TTHREAD(queue__first()))) {
+          tthread.waiting[i] = tthread.waiting[nb_waiting-1];
+          tthread.nb_waiting--;
+      }
+      ++i;
+    }
+
+    if (tthread.nb_waiting == 0) {
+        retval = tthread._retval;
+    }
 }
 
 
