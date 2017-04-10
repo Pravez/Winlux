@@ -9,10 +9,10 @@
 #define FAILED 0
 
 
-struct tthread_t * tthread_init(){
-    struct tthread_t * tthread = malloc(sizeof(struct tthread));
-
-    return tthread;
+struct tthread_t * tthread_init() {
+  struct tthread_t * tthread = malloc(sizeof(struct tthread_t));
+  
+  return tthread;
 }
 
 
@@ -22,18 +22,8 @@ void tthread_destroy(struct tthread_t * tthread) {
 }
 
 
-int cxt_watchdog(struct watchdog_args * args) {
-  int res = getcontext(args->_thread->_context);
-  if (res == -1)
-    ERROR("impossible to create");
-  
-  args->_thread->_context.uc_stack.ss_size = STACK_SIZE;
-  args->_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
-  args->_thread->_context.uc_link = &(args->_calling->_context);
-
-  makecontext(&(args->_thread->_context), args->_func, args->_func_arg);
-
-  // get return value;
+int cxt_watchdog(struct watchdog_args * args) {  
+  args->_thread->retval = &(args->_func(args->_func_arg));
 
   return SUCCESS;
 }

@@ -7,12 +7,27 @@
 thread_t thread_self(void)
 {
   tthread_t * current = queue__get();
-  return (thread_t) current;
+  return ((thread_t) current);
 }
 
 
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
-  // create watchdog_args
+  struct watchdog_args args;
+  int res = getcontext(args._thread->_context);
+  if (res == -1)
+    ERROR("impossible get current context");  
+
+  int res = getcontext(&(args._thread->_context.uc_link));
+  if (res == -1)
+    ERROR("impossible get current context");
+  
+  args._thread->_context.uc_stack.ss_size = STACK_SIZE;
+  args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+  args._func = func;
+  args._func_arg = funcargs;
+
+  makecontext(&(args->_thread->_context), args->_func, args->_func_arg);
+
   // check if the main has been put in a thread
 }
 
