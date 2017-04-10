@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <valgrind/valgrind.h>
 
+#include "queue/o_list.h"
+
 enum TTHREAD_STATE{
     ACTIVE, SLEEPING
 };
@@ -17,7 +19,8 @@ struct tthread_t{
     void** _retval;
 
     enum TTHREAD_STATE _state;
-    struct tthread_t* _waiting_threads;
+    List* _waiting_threads;
+    int _waiting_thread_nbr;
 
     //For memory purposes
     int _valgrind_stackid;

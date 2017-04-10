@@ -12,7 +12,9 @@
 struct tthread_t* tthread_init(){
     struct tthread_t* tthread = malloc(sizeof(struct tthread_t));
     tthread->_state = SLEEPING;
-    tthread->_join_wait = 0;
+    tthread->_waiting_thread_nbr = 0;
+    tthread->_waiting_thread_nbr = 0;
+    tthread->_waiting_threads = emptylist();
 
     return tthread;
 }
