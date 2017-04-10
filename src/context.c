@@ -4,10 +4,6 @@
 
 #include "context.h"
 
-#define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
-#define SUCCESS 1
-#define FAILED 0
-
 
 struct tthread_t * tthread_init() {
     struct tthread_t* tthread = malloc(sizeof(struct tthread_t));
