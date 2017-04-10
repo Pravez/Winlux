@@ -19,7 +19,7 @@ struct tthread_t{
     void** _retval;
 
     enum TTHREAD_STATE _state;
-    List* _waiting_threads;
+    struct list* _waiting_threads;
     int _waiting_thread_nbr;
 
     //For memory purposes
@@ -28,7 +28,7 @@ struct tthread_t{
 
 
 struct watchdog_args {
-  tthread_t * _thread;
+  struct tthread_t * _thread;
   //tthread_t * _calling;
   void * (*_func)(void *);
   void * _func_arg;

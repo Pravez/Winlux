@@ -4,20 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct node {
-    int data;
+struct node {
+    void* data;
     struct node * next;
-} Node;
+};
 
-typedef struct list {
-    Node * head;
-} List;
+struct list {
+    struct node * head;
+};
 
-List * emptylist();
-void add(int data, List * list);
-void delete(int data, List * list);
-void display(List * list);
-void reverse(List * list);
-void destroy(List * list);
+struct list * emptylist();
+void add(void* data, struct list * list);
+void delete(void* data, struct list * list);
+void destroy(struct list * list);
+int hasNext(struct node* node);
 
 #endif //FRED_CIE_O_LIST_H
