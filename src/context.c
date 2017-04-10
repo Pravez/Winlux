@@ -3,6 +3,7 @@
 #include <valgrind/valgrind.h>
 
 #include "context.h"
+#include "thread.h"
 
 
 struct tthread_t * tthread_init() {
@@ -24,8 +25,7 @@ void tthread_destroy(struct tthread_t * tthread) {
 }
 
 
-int cxt_watchdog(struct watchdog_args * args) {  
-  args->_thread->retval = &(args->_func(args->_func_arg));
-
+int cxt_watchdog(struct watchdog_args * args) {
+  thread_exit(args->_func(args->_func_arg));
   return SUCCESS;
 }
