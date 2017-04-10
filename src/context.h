@@ -28,8 +28,8 @@ struct tthread_t{
 
 
 struct watchdog_args {
-  struct tthread_t * _thread;
-  struct tthread_t * _calling;
+  tthread_t * _thread;
+  //tthread_t * _calling;
   void * (*_func)(void *);
   void * _func_arg;
 };
