@@ -77,5 +77,9 @@ int thread_join(thread_t thread, void **retval){
 void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
   struct tthread_t * current = TO_TTHREAD(queue__first());
   current->retval = &retval; //pass function's retval to calling thread
+  for (int i=0; i < current.nb_waiting; ++i) {
+    current.waiting[i]->_state = ACTIVE;
+  }
+
   exit(0);
 }
