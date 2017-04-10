@@ -25,7 +25,7 @@ void tthread_destroy(struct tthread_t * tthread) {
 
 
 int cxt_watchdog(struct watchdog_args * args) {  
-  args->_thread->retval = &(args->_func(args->_func_arg));
+  args->_thread->_retval = (args->_func(args->_func_arg));
 
   return SUCCESS;
 }

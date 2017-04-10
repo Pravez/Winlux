@@ -42,7 +42,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     // need to add the current thread to the list of waiting threads
     queue__push_back(args._thread);
 
-    makecontext(&(args._thread->_context), cxt_watchdog, 1, &args);
+    makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
 
     // check if the main has been put in a thread
 
@@ -56,6 +56,8 @@ int thread_yield(void) {
     struct tthread_t *actual = queue__pop();
     queue__push_back(actual);
     swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
+
+    return 0;
 }
 
 /*
@@ -65,7 +67,7 @@ int thread_yield(void) {
  */
 int thread_join(thread_t thread, void **retval) {
     if (thread == NULL) { //doesn't exist --> error, invalid
-        perror("Error : thread doesn't exist in thread_join");
+        ERROR("Error : thread doesn't exist in thread_join");
         return 0;
     }
 
@@ -95,7 +97,7 @@ int thread_join(thread_t thread, void **retval) {
  * Termine le thread courant en renvoyant la valeur de retour retval.
  * Cette fonction ne retourne jamais.
  */
-void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
+__attribute__ ((__noreturn__)) void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
     current->_retval = &retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
