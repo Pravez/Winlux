@@ -17,7 +17,7 @@ struct tthread_t{
     void** _retval;
 
     enum TTHREAD_STATE _state;
-    int _join_wait;
+    struct tthread_t* _waiting_threads;
 
     //For memory purposes
     int _valgrind_stackid;
