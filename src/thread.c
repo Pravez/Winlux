@@ -19,6 +19,7 @@ thread_t thread_self(void)
 
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
   struct watchdog_args args;
+
   int res = getcontext(args._thread->_context);
   if (res == -1)
     ERROR("impossible get current context");  
@@ -32,7 +33,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
   args._func = func;
   args._func_arg = funcargs;
 
-  makecontext(&(args->_thread->_context), args->_func, args->_func_arg);
+  makecontext(&(args->_thread->_context), cxt_watchdog, args);
 
   // check if the main has been put in a thread
 }
