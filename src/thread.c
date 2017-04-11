@@ -36,7 +36,8 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     int res = getcontext(&args._thread->_context);
     if (res == -1) {
         ERROR("impossible get current context");
-		return -1;
+        tthread_destroy(args._thread);
+		return FAILED;
 	}
 
     args._thread->_context.uc_link = &current->_context;
@@ -52,8 +53,11 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args._thread->_waiting_thread_nbr++;
     */
 
-    if (makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args) == -1)
-	  return -1;
+    args._thread->_state = ACTIVE;
+
+    makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
+
+    setcontext(&args._thread->_context);
 
     *newthread = args._thread;
 
@@ -67,6 +71,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
+    if (thread_main_is_thread())
+        thread_main_to_thread();
+
     struct tthread_t *actual = queue__pop();
     queue__push_back(actual);
     swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
@@ -113,7 +120,7 @@ int thread_join(thread_t thread, void **retval) {
  * Cette fonction ne retourne jamais.
  */
 void thread_exit(void *retval) {
-    struct tthread_t *current = TO_TTHREAD(queue__first());
+    struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
     while (has_next(current_node)) {
@@ -124,7 +131,6 @@ void thread_exit(void *retval) {
     setcontext(&(TO_TTHREAD(queue__first()))->_context);
     while (1);
 }
-
 
 void thread_main_to_thread() {
     queue__init();

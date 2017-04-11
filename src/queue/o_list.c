@@ -59,7 +59,7 @@ void delete_node(struct node *node, struct list *list) {
 }
 
 int has_next(struct node *node) {
-    return node->next == NULL;
+    return node != NULL && node->next != NULL;
 }
 
 void destroy(struct list *list) {

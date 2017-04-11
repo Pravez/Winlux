@@ -12,8 +12,8 @@ enum TTHREAD_STATE{
 };
 
 #define STACK_SIZE 64 * 102
-#define SUCCESS 1
-#define FAILED 0
+#define SUCCESS 0
+#define FAILED -1
 
 
 struct tthread_t{
