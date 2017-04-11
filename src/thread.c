@@ -102,7 +102,7 @@ __attribute__ ((__noreturn__)) void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
-    while (hasNext(current_node)) {
+    while (has_next(current_node)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }

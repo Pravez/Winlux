@@ -58,7 +58,7 @@ void delete_node(struct node *node, struct list *list) {
     }
 }
 
-int has_hext(struct node *node) {
+int has_next(struct node *node) {
     return node->next == NULL;
 }
 
