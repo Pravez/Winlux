@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 99)
 
 find_package(Threads REQUIRED)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -lpthread")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -lpthread -Werror")
 
 
 add_subdirectory(src)

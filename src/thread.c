@@ -1,11 +1,10 @@
-#include <errno.h>
-//#include <tclDecls.h>
 #include <stdio.h>
 #include <ucontext.h>
+
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
 #include "thread.h"
-#include "context.h"
+#include "thread_private.h"
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
@@ -36,7 +35,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     if (res == -1)
         ERROR("impossible get current context");
 
-    args._thread->_context.uc_link = current->_context;
+    args._thread->_context.uc_link = &current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
     args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
     args._func = func;
@@ -48,9 +47,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     add(args._thread->_context.uc_link, args._thread->_waiting_threads);
     args._thread->_waiting_thread_nbr++;
     */ 
-
-    makecontext(&(args._thread->_context), cxt_watchdog, 1, &args);
     
+    makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
+
     *newthread = args._thread;
 
     // check if the main has been put in a thread
@@ -66,6 +65,8 @@ int thread_yield(void) {
     struct tthread_t *actual = queue__pop();
     queue__push_back(actual);
     swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
+
+    return 0;
 }
 
 
@@ -76,7 +77,7 @@ int thread_yield(void) {
  */
 int thread_join(thread_t thread, void **retval) {
     if (thread == NULL) { //doesn't exist --> error, invalid
-        perror("Error : thread doesn't exist in thread_join");
+        ERROR("Error : thread doesn't exist in thread_join");
         return 0;
     }
 
@@ -110,11 +111,13 @@ void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
-    while (hasNext(current_node)) {
+    while (has_next(current_node)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }
-    setcontext(&TO_TTHREAD(queue__first())->_context);
+
+    setcontext(&(TO_TTHREAD(queue__first()))->_context);
+    while(1);
 }
 
 
@@ -125,9 +128,9 @@ void thread_main_to_thread() {
   if (res == -1)
     ERROR("impossible get main context");
 
-  args._thread->_context.uc_link = current->_context;
-  args._thread->_context.uc_stack.ss_size = STACK_SIZE;
-  args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+  main_thread->_context.uc_link = &(main_thread->_context);
+  main_thread->_context.uc_stack.ss_size = STACK_SIZE;
+  main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
 
   queue__push_back(main_thread);
 }
