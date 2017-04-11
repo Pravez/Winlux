@@ -1,11 +1,8 @@
-#include <errno.h>
-//#include <tclDecls.h>
 #include <stdio.h>
 #include <ucontext.h>
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
 #include "thread.h"
-#include "context.h"
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
@@ -30,9 +27,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     if (res == -1)
         ERROR("impossible get current context");
 
-    args._thread->_context.uc_link = current->_context;
+    args._thread->_context.uc_link = &current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
-    args._thread->_context.uc_stack.ss_sp = malloretvalc(STACK_SIZE);
+    args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
     args._func = func;
     args._func_arg = funcarg;
 
@@ -98,7 +95,7 @@ int thread_join(thread_t thread, void **retval) {
  * Termine le thread courant en renvoyant la valeur de retour retval.
  * Cette fonction ne retourne jamais.
  */
-__attribute__ ((__noreturn__)) void thread_exit(void *retval) {
+void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
@@ -106,5 +103,6 @@ __attribute__ ((__noreturn__)) void thread_exit(void *retval) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }
-    setcontext(&TO_TTHREAD(&TO_TTHREAD(queue__first())->_context);
+    setcontext(&(TO_TTHREAD(queue__first()))->_context);
+    while(1);
 }
