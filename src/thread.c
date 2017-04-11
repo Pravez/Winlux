@@ -32,7 +32,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     args._thread->_context.uc_link = current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
-    args._thread->_context.uc_stack.ss_sp = malloretvalc(STACK_SIZE);
+    args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
     args._func = func;
     args._func_arg = funcarg;
 
@@ -41,14 +41,17 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     /*
     add(args._thread->_context.uc_link, args._thread->_waiting_threads);
     args._thread->_waiting_thread_nbr++;
-    */
+    */ 
 
     makecontext(&(args._thread->_context), cxt_watchdog, 1, &args);
+    
+    *newthread = args._thread;
 
     // check if the main has been put in a thread
 
     return SUCCESS;
 }
+
 
 /*
  * Passe la main à un autre thread.
@@ -58,6 +61,7 @@ int thread_yield(void) {
     queue__push_back(actual);
     swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
 }
+
 
 /*
  * Attend la fin d'exécution d'un thread.
@@ -96,7 +100,7 @@ int thread_join(thread_t thread, void **retval) {
  * Termine le thread courant en renvoyant la valeur de retour retval.
  * Cette fonction ne retourne jamais.
  */
-void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
+void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
@@ -104,5 +108,8 @@ void thread_exit(void *retval) __attribute__ ((__noreturn__)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }
-    setcontext(&TO_TTHREAD(&TO_TTHREAD(queue__first())->_context);
+    setcontext(&TO_TTHREAD(queue__first())->_context);
 }
+
+
+int thread_
