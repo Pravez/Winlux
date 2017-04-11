@@ -112,4 +112,11 @@ void thread_exit(void *retval) {
 }
 
 
-int thread_
+void thread_main_to_thread() {
+
+}
+
+
+int thread_main_is_thread() {
+  return 
+}
