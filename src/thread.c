@@ -29,12 +29,15 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
         thread_main_to_thread();
 
     struct watchdog_args args;
-    args._thread = tthread_init();
     struct tthread_t *current = thread_self();
 
+    args._thread = tthread_init();
+
     int res = getcontext(&args._thread->_context);
-    if (res == -1)
+    if (res == -1) {
         ERROR("impossible get current context");
+		return -1;
+	}
 
     args._thread->_context.uc_link = &current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
@@ -49,7 +52,8 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args._thread->_waiting_thread_nbr++;
     */
 
-    makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
+    if (makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args) == -1)
+	  return -1;
 
     *newthread = args._thread;
 
