@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <ucontext.h>
+
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
 #include "thread.h"
+#include "thread_private.h"
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
@@ -11,6 +13,9 @@
  * Récupère l'identifiant du thread courant.
  */
 thread_t thread_self(void) {
+    if (thread_main_is_thread())
+        thread_main_to_thread();
+
     struct tthread_t *current = queue__first();
     return (thread_t) current;
 }
@@ -20,12 +25,20 @@ thread_t thread_self(void) {
  * Renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
+    if (thread_main_is_thread())
+        thread_main_to_thread();
+
     struct watchdog_args args;
-    struct tthread_t * current = thread_self();
+    struct tthread_t *current = thread_self();
+
+    args._thread = tthread_init();
 
     int res = getcontext(&args._thread->_context);
-    if (res == -1)
+    if (res == -1) {
         ERROR("impossible get current context");
+        tthread_destroy(args._thread);
+		return FAILED;
+	}
 
     args._thread->_context.uc_link = &current->_context;
     args._thread->_context.uc_stack.ss_size = STACK_SIZE;
@@ -40,23 +53,34 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args._thread->_waiting_thread_nbr++;
     */
 
+    args._thread->_state = ACTIVE;
+
     makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
+
+    setcontext(&args._thread->_context);
+
+    *newthread = args._thread;
 
     // check if the main has been put in a thread
 
     return SUCCESS;
 }
 
+
 /*
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
+    if (thread_main_is_thread())
+        thread_main_to_thread();
+
     struct tthread_t *actual = queue__pop();
     queue__push_back(actual);
     swapcontext(&TO_TTHREAD(queue__second())->_context, &TO_TTHREAD(queue__first())->_context);
 
     return 0;
 }
+
 
 /*
  * Attend la fin d'exécution d'un thread.
@@ -92,7 +116,7 @@ int thread_join(thread_t thread, void **retval) {
 
     *retval = tthread->_retval;
 
-    if(tthread->_waiting_thread_nbr <= 0){
+    if (tthread->_waiting_thread_nbr <= 0) {
         destroy(tthread->_waiting_threads);
         //desallouer le contexte lol
         free(tthread);
@@ -106,13 +130,34 @@ int thread_join(thread_t thread, void **retval) {
  * Cette fonction ne retourne jamais.
  */
 void thread_exit(void *retval) {
-    struct tthread_t *current = TO_TTHREAD(queue__first());
+    struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
-    while (hasNext(current_node)) {
+    while (has_next(current_node)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
         current_node = current_node->next;
     }
+
     setcontext(&(TO_TTHREAD(queue__first()))->_context);
-    while(1);
+    while (1);
+}
+
+void thread_main_to_thread() {
+    queue__init();
+    struct tthread_t *main_thread = tthread_init();
+
+    int res = getcontext(&(main_thread->_context));
+    if (res == -1)
+        ERROR("impossible get main context");
+
+    main_thread->_context.uc_link = &(main_thread->_context);
+    main_thread->_context.uc_stack.ss_size = STACK_SIZE;
+    main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+
+    queue__push_back(main_thread);
+}
+
+
+int thread_main_is_thread() {
+    return queue__empty();
 }

@@ -17,7 +17,7 @@ struct list * emptylist();
 void add(void* data, struct list * list);
 void delete(void* data, struct list * list);
 void destroy(struct list * list);
-int hasNext(struct node* node);
+int has_next(struct node* node);
 void delete_node(struct node* node, struct list * list);
 int find(struct list * list, void * elem);
 
