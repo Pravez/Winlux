@@ -57,11 +57,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
 
-    setcontext(&args._thread->_context);
-
     *newthread = args._thread;
 
-    // check if the main has been put in a thread
+    //setcontext(&args._thread->_context);
 
     return SUCCESS;
 }
@@ -94,11 +92,14 @@ int thread_join(thread_t thread, void **retval) {
     }
 
     struct tthread_t *tthread = TO_TTHREAD(thread);
+    struct tthread_t *self = TO_TTHREAD(thread_self());
 
     if (tthread->_state == ACTIVE) {
         tthread->_waiting_thread_nbr++; //increment the number of thread that wait the thread
+        self->_state = SLEEPING;
         add(thread_self(), tthread->_waiting_threads);
-        thread_yield(); //give the hand
+        while(self->_state == SLEEPING)
+            thread_yield(); //give the hand
     }
 
     delete(thread_self(), tthread->_waiting_threads);
