@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include "queue/o_queue.h"
+#include "queue/o_list.h"
 #include "thread.h"
 #include "context.h"
 
@@ -41,6 +42,8 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     // need to add the current thread to the list of waiting threads
     queue__push_back(args._thread);
+    add(args._thread->_context.uc_link, args._thread->_waiting_threads);
+    args._thread->_waiting_thread_nbr++;
 
     makecontext(&(args._thread->_context), (void (*)(void)) cxt_watchdog, 1, &args);
 
@@ -82,7 +85,7 @@ int thread_join(thread_t thread, void **retval) {
     delete(thread_self(), tthread->_waiting_threads);
     tthread->_waiting_thread_nbr--;
 
-    retval = tthread->_retval;
+    *retval = tthread->_retval;
 
     if(tthread->_waiting_thread_nbr <= 0){
         destroy(tthread->_waiting_threads);
@@ -99,7 +102,7 @@ int thread_join(thread_t thread, void **retval) {
  */
 __attribute__ ((__noreturn__)) void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__first());
-    current->_retval = &retval; //pass function's retval to calling thread
+    current->_retval = retval; //pass function's retval to calling thread
     struct node *current_node = current->_waiting_threads->head;
     while (hasNext(current_node)) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
