@@ -68,8 +68,18 @@ int thread_join(thread_t thread, void **retval) {
         ERROR("Error : thread doesn't exist in thread_join");
         return 0;
     }
+    if (thread == queue__first()){
+        ERROR("Error : Try to wait itself, forbidden");
+        return 0;
+    }
 
     struct tthread_t *tthread = TO_TTHREAD(thread);
+
+    if (find(&TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
+        ERROR("Error : Thread already wait for this thread, can't wait it");
+        return 0;
+    }
+
 
     if (tthread->_state == ACTIVE) {
         tthread->_waiting_thread_nbr++; //increment the number of thread that wait the thread
