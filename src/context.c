@@ -12,6 +12,7 @@ struct tthread_t * tthread_init() {
     tthread->_waiting_thread_nbr = 0;
     tthread->_waiting_thread_nbr = 0;
     tthread->_waiting_threads = emptylist();
+    tthread->retval = NULL;
 
     return tthread;
 }

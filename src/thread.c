@@ -14,8 +14,11 @@
  * Récupère l'identifiant du thread courant.
  */
 thread_t thread_self(void) {
-    struct tthread_t *current = queue__first();
-    return (thread_t) current;
+  if (thread_main_is_thread()) 
+    thread_main_to_thread();
+    
+  struct tthread_t *current = queue__first();
+  return (thread_t) current;
 }
 
 /*
@@ -23,7 +26,10 @@ thread_t thread_self(void) {
  * Renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
-    struct watchdog_args args;
+  if (thread_main_is_thread()) 
+    thread_main_to_thread();
+
+  struct watchdog_args args;
     struct tthread_t * current = thread_self();
 
     int res = getcontext(&args._thread->_context);
@@ -113,10 +119,20 @@ void thread_exit(void *retval) {
 
 
 void thread_main_to_thread() {
+  struct tthread_t * main_thread = tthread_init();
+  
+  int res = getcontext(&(main_thread->_context));
+  if (res == -1)
+    ERROR("impossible get main context");
 
+  args._thread->_context.uc_link = current->_context;
+  args._thread->_context.uc_stack.ss_size = STACK_SIZE;
+  args._thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+
+  queue__push_back(main_thread);
 }
 
 
 int thread_main_is_thread() {
-  return 
+  return queue__empty();
 }
