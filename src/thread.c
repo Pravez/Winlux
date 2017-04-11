@@ -98,7 +98,7 @@ int thread_join(thread_t thread, void **retval) {
     struct tthread_t *tthread = TO_TTHREAD(thread);
     struct tthread_t *self = TO_TTHREAD(thread_self());
 
-    if (find(&TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
+    if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
         ERROR("Error : Thread already wait for this thread, can't wait it");
         return 0;
     }
