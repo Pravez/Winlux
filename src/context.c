@@ -18,10 +18,11 @@ struct tthread_t *tthread_init() {
 }
 
 
-void tthread_destroy(struct tthread_t *tthread) {
-    destroy(tthread->_waiting_threads);
-    free(tthread);
-    VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
+
+
+void tthread_destroy(struct tthread_t * tthread) {destroy(tthread->_waiting_threads);
+  free(tthread);
+  VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }
 
 
