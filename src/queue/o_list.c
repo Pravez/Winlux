@@ -72,3 +72,15 @@ void destroy(struct list *list) {
     }
     free(list);
 }
+
+int find(struct list * list, void * elem){
+    struct node* n = list->head;
+    while(has_next(n)){
+        if(n->data == elem)
+            return 0;
+
+        n = n->next;
+    }
+
+    return 1;
+}

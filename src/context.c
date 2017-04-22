@@ -26,7 +26,9 @@ void tthread_destroy(struct tthread_t * tthread) {destroy(tthread->_waiting_thre
 }
 
 
-int cxt_watchdog(struct watchdog_args *args) {
-    thread_exit(args->_func(args->_func_arg));
+int cxt_watchdog(void *args) {
+    struct watchdog_args* arguments = (struct watchdog_args*) args;
+    void* value = arguments->_func(arguments->_func_arg);
+    thread_exit(value);
     return SUCCESS;
 }

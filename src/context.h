@@ -7,7 +7,7 @@
 
 #include "queue/o_list.h"
 
-enum TTHREAD_STATE{
+enum TTHREAD_STATE {
     ACTIVE, SLEEPING
 };
 
@@ -16,28 +16,35 @@ enum TTHREAD_STATE{
 #define FAILED -1
 
 
-struct tthread_t{
+struct tthread_t {
     ucontext_t _context;
-    void* _retval;
+    void *_retval;
 
     enum TTHREAD_STATE _state;
-    struct list* _waiting_threads;
+    struct list *_waiting_threads;
     int _waiting_thread_nbr;
 
     //For memory purposes
     int _valgrind_stackid;
+
+    //For debug purposes
+    char*name;
 };
 
 
 struct watchdog_args {
-  struct tthread_t * _thread;
-  void * (*_func)(void *);
-  void * _func_arg;
+    struct tthread_t *_thread;
+
+    void *(*_func)(void *);
+
+    void *_func_arg;
 };
 
 
-struct tthread_t* tthread_init();
-void tthread_destroy(struct tthread_t * tthread);
-int cxt_watchdog(struct watchdog_args * args);
+struct tthread_t *tthread_init();
+
+void tthread_destroy(struct tthread_t *tthread);
+
+int cxt_watchdog(void *args);
 
 #endif //FRED_CIE_CONTEXT_H
