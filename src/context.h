@@ -8,7 +8,7 @@
 #include "queue/o_list.h"
 
 enum TTHREAD_STATE {
-    ACTIVE, SLEEPING
+    ACTIVE, SLEEPING, DEAD
 };
 
 #define STACK_SIZE 64 * 102

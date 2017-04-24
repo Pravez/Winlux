@@ -77,11 +77,21 @@ int thread_yield(void) {
 
     struct tthread_t *actual = queue__pop();
     queue__push_back(actual);
-    void* first = queue__first();
-    struct tthread_t* ff = TO_TTHREAD(first);
+
+    void* first;
+    struct tthread_t* ff = NULL;
+
+    do{
+        if(ff != NULL)
+            queue__push_back(queue__pop());
+
+        first = queue__first();
+        ff = TO_TTHREAD(first);
+    }while(ff->_state == SLEEPING || ff->_state == DEAD);
+
     //void* second = queue__second();
     //struct tthread_t* sec = TO_TTHREAD(second);
-    setcontext(&ff->_context);
+    swapcontext(&actual->_context, &ff->_context);
 
     return 0;
 }
@@ -117,10 +127,10 @@ int thread_join(thread_t thread, void **retval) {
         add(thread_self(), tthread->_waiting_threads);
         while(self->_state == SLEEPING)
             thread_yield(); //give the hand
-    }
 
-    delete(thread_self(), tthread->_waiting_threads);
-    tthread->_waiting_thread_nbr--;
+        delete(thread_self(), tthread->_waiting_threads);
+        tthread->_waiting_thread_nbr--;
+    }
 
     *retval = tthread->_retval;
 
@@ -140,14 +150,15 @@ int thread_join(thread_t thread, void **retval) {
 void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
+    current->_state = DEAD;
     struct node *current_node = current->_waiting_threads->head;
-    while (has_next(current_node)) {
+    while(current_node != NULL){
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
 
         current_node = current_node->next;
     }
 
-    setcontext(&(TO_TTHREAD(queue__first()))->_context);
+    swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context);
     while (1);
 }
 
