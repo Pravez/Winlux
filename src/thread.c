@@ -50,18 +50,9 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     // need to add the current thread to the list of waiting threads
     queue__push_back(args->_thread);
-    /*
-    add(args._thread->_context.uc_link, args._thread->_waiting_threads);
-    args._thread->_waiting_thread_nbr++;
-    */
-
-
-
-    //setcontext(&args._thread->_context);
 
     return SUCCESS;
 }
-
 
 /*
  * Passe la main à un autre thread.
@@ -81,13 +72,10 @@ int thread_yield(void) {
         ff = TO_TTHREAD(first);
     }while(ff->_state == SLEEPING || ff->_state == DEAD);
 
-    //void* second = queue__second();
-    //struct tthread_t* sec = TO_TTHREAD(second);
     swapcontext(&actual->_context, &ff->_context);
 
     return 0;
 }
-
 
 /*
  * Attend la fin d'exécution d'un thread.
@@ -135,8 +123,6 @@ int thread_join(thread_t thread, void **retval) {
     }
 
     if(queue__second() == NULL){
-        //desallouer le contexte lol
-        //free(tthread->name);
         free(tthread->_context.uc_stack.ss_sp);
         free(tthread);
     }
@@ -168,7 +154,7 @@ void thread_exit(void *retval) {
         free(current->name);
         free(current);
     }else{
-        swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context);
+        swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }
 
     while (1);
