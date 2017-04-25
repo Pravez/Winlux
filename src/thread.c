@@ -8,6 +8,9 @@
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
+stack_t ending_stack;
+static char ssp[STACK_SIZE];
+
 /*
  * Récupère l'identifiant du thread courant.
  */
@@ -39,7 +42,6 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg, cha
     args->_func = func;
     args->_func_arg = funcarg;
 
-    args->_thread->_state = ACTIVE;
     args->_thread->name = name;
 
     makecontext(&(args->_thread->_context), (void (*)(void)) cxt_watchdog, 1, args);
@@ -130,7 +132,12 @@ int thread_join(thread_t thread, void **retval) {
 
     if (tthread->_waiting_thread_nbr <= 0) {
         destroy(tthread->_waiting_threads);
+    }
+
+    if(queue__second() == NULL){
         //desallouer le contexte lol
+        //free(tthread->name);
+        free(tthread->_context.uc_stack.ss_sp);
         free(tthread);
     }
 
@@ -152,7 +159,18 @@ void thread_exit(void *retval) {
         current_node = current_node->next;
     }
 
-    swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context);
+    if(queue__first() == NULL){
+        //We are the last thread
+        //stack_t* stack_address = &current->_context.uc_stack;
+        current->_context.uc_stack = ending_stack;
+        //free(stack_address->ss_sp);
+        destroy(current->_waiting_threads);
+        free(current->name);
+        free(current);
+    }else{
+        swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context);
+    }
+
     while (1);
 }
 
@@ -167,9 +185,12 @@ void __attribute__((constructor)) premain(){
     main_thread->_context.uc_link = &main_thread->_context;
     main_thread->_context.uc_stack.ss_size = STACK_SIZE;
     main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
-    main_thread->_state = ACTIVE;
 
     main_thread->name = "main";
+
+    ending_stack.ss_size = STACK_SIZE;
+    ending_stack.ss_sp = ssp;
+    ending_stack.ss_flags = 0;
 
     queue__push_back(main_thread);
 }

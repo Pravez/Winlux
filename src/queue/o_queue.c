@@ -16,11 +16,12 @@ void* queue__pop(){
 }
 
 void* queue__first(){
-    return TAILQ_FIRST(&head)->item;
+    return TAILQ_FIRST(&head) == NULL ? NULL : TAILQ_FIRST(&head)->item;
 }
 
 void* queue__second(){
-    return TAILQ_NEXT(TAILQ_FIRST(&head), entries)->item;
+
+    return TAILQ_NEXT(TAILQ_FIRST(&head), entries) == NULL ? NULL : TAILQ_NEXT(TAILQ_FIRST(&head), entries)->item;
 }
 
 int queue__empty(){

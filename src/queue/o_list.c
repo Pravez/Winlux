@@ -64,7 +64,7 @@ int has_next(struct node *node) {
 
 void destroy(struct list *list) {
     struct node *current = list->head;
-    struct node *next = current;
+    struct node *next;
     while (current != NULL) {
         next = current->next;
         free(current);
