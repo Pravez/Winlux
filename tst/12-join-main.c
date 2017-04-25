@@ -35,7 +35,7 @@ int main()
 
   thmain = thread_self();
 
-  err = thread_create(&th, thfunc, NULL);
+  err = thread_create(&th, thfunc, NULL, NULL);
   assert(!err);
 
   thread_exit((void*) 0xdeadbeef);

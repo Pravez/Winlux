@@ -34,11 +34,11 @@ int main()
   void *res;
   int err, i;
 
-  err = thread_create(&th1, thfunc, "fils1");
+  err = thread_create(&th1, thfunc, "fils1", NULL);
   assert(!err);
-  err = thread_create(&th2, thfunc, "fils2");
+  err = thread_create(&th2, thfunc, "fils2", NULL);
   assert(!err);
-  err = thread_create(&th3, thfunc, "fils3");
+  err = thread_create(&th3, thfunc, "fils3", NULL);
   assert(!err);
   /* des switchs avec l'autre thread */
   for(i=0; i<20; i++) {

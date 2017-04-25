@@ -30,9 +30,9 @@ int main()
   int err;
   void *res = NULL;
 
-  err = thread_create(&th, thfunc, NULL);
+  err = thread_create(&th, thfunc, NULL, NULL);
   assert(!err);
-  err = thread_create(&th2, thfunc2, NULL);
+  err = thread_create(&th2, thfunc2, NULL, NULL);
   assert(!err);
 
   err = thread_join(th, &res);
