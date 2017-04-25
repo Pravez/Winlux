@@ -129,8 +129,7 @@ int thread_join(thread_t thread, void **retval) {
             *retval = NULL;
 
     if (tthread->_waiting_thread_nbr <= 0) {
-        tthread__free(tthread);
-        //free(tthread);
+        tthread_destroy(tthread);
     }
 
     return 0;
