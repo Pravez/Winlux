@@ -19,7 +19,7 @@ struct tthread_t *tthread_init() {
 
 void tthread_destroy(struct tthread_t * tthread) {
   destroy(tthread->_waiting_threads);
-  free(tthread->name);
+  //free(tthread->name);
   free(tthread->_watchdog_args);
   free(tthread);
   VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
@@ -32,4 +32,9 @@ int cxt_watchdog(void *args) {
     free(arguments);
     thread_exit(value);
     return SUCCESS;
+}
+
+
+void tthread__end_program(void *last_address) {
+  
 }
