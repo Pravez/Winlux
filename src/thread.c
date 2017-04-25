@@ -39,6 +39,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_thread->_context.uc_link = &current->_context;
     args->_thread->_context.uc_stack.ss_size = STACK_SIZE;
     args->_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+    args->_thread->_valgrind_stackid = VALGRIND_STACK_REGISTER(args->_thread->_context.uc_stack.ss_sp, args->_thread->_context.uc_stack.ss_sp + args->_thread->_context.uc_stack.ss_size);
     args->_func = func;
     args->_func_arg = funcarg;
 
@@ -150,9 +151,7 @@ void thread_exit(void *retval) {
         //stack_t* stack_address = &current->_context.uc_stack;
         current->_context.uc_stack = ending_stack;
         //free(stack_address->ss_sp);
-        destroy(current->_waiting_threads);
-        free(current->name);
-        free(current);
+	tthread_destroy(current);
     }else{
         swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }

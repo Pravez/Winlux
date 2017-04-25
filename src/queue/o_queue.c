@@ -11,8 +11,10 @@ int queue__push_back(void* item){
 
 void* queue__pop(){
     struct entry* en = TAILQ_FIRST(&head);
+    void * ret = en->item;
     TAILQ_REMOVE(&head, en, entries);
-    return en->item;
+    free(en);
+    return ret;
 }
 
 void* queue__first(){

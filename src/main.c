@@ -18,9 +18,9 @@ int main(int argc, char *argv[]) {
     int err;
 
     printf("le main lance 2 threads...\n");
-    err = thread_create(&thread1, threadfunc, "thread1", "thread1");
+    err = thread_create(&thread1, threadfunc, "thread1");
     assert(!err);
-    err = thread_create(&thread2, threadfunc, "thread2", "thread2");
+    err = thread_create(&thread2, threadfunc, "thread2");
     assert(!err);
     //thread_yield();
     printf("le main a lancé les threads %p et %p\n",
