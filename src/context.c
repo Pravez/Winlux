@@ -5,6 +5,7 @@
 #include "context.h"
 #include "thread.h"
 
+struct tthread_t;
 
 struct tthread_t *tthread_init() {
     struct tthread_t *tthread = malloc(sizeof(struct tthread_t));
@@ -17,24 +18,28 @@ struct tthread_t *tthread_init() {
 }
 
 
-void tthread_destroy(struct tthread_t * tthread) {
-  destroy(tthread->_waiting_threads);
-  //free(tthread->name);
-  free(tthread->_watchdog_args);
-  free(tthread);
-  VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
+void tthread_destroy(struct tthread_t *tthread) {
+    destroy(tthread->_waiting_threads);
+    free(tthread->_waiting_threads);
+    if(tthread->_watchdog_args != NULL)
+        free(tthread->_watchdog_args);
+    free(tthread->_context.uc_stack.ss_sp);
+    //free(tthread->name);
+    VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
+    free(tthread);
 }
 
 
 int cxt_watchdog(void *args) {
-    struct watchdog_args* arguments = (struct watchdog_args*) args;
-    void * value = arguments->_func(arguments->_func_arg);
-    free(arguments);
+    struct watchdog_args *arguments = (struct watchdog_args *) args;
+    void *value = arguments->_func(arguments->_func_arg);
     thread_exit(value);
     return SUCCESS;
 }
 
 
 void tthread__end_program(void *last_address) {
-  
+    tthread_destroy(last_address);
+
+    exit(0);
 }
