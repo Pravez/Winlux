@@ -29,7 +29,8 @@ void tthread__end_program(void* last_address){
     return;
 }
 
-void tthread_destroy(struct tthread_t * tthread) {destroy(tthread->_waiting_threads);free(tthread->name);
+void tthread_destroy(struct tthread_t * tthread) {
+    destroy(tthread->_waiting_threads);free(tthread->name);
   free(tthread);
   VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }

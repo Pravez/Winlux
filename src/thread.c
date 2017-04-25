@@ -177,18 +177,9 @@ void __attribute__((constructor)) premain(){
 }
 
 void __attribute__((destructor)) postmain(){
-    /*queue__init();
-    struct tthread_t *main_thread = tthread_init();
-
-    int res = getcontext(&main_thread->_context);
-    if (res == -1)
-        ERROR("impossible get main context");
-
-    main_thread->_context.uc_link = &main_thread->_context;
-    main_thread->_context.uc_stack.ss_size = STACK_SIZE;
-    main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
-
-    main_thread->name = "main";
-
-    queue__push_back(main_thread);*/
+    if(queue__first() != NULL){
+        struct tthread_t* main_thread = TO_TTHREAD(queue__pop());
+        tthread__free(main_thread);
+        free(main_thread);
+    }
 }
