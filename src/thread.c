@@ -23,7 +23,7 @@ thread_t thread_self(void) {
  * Créée un nouveau thread qui va exécuter la fonction func avec l'argument funcarg.
  * Renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
-int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg, char* name) {
+int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     struct watchdog_args* args = malloc(sizeof(struct watchdog_args));
     struct tthread_t *current = thread_self();
 
@@ -42,7 +42,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg, cha
     args->_func = func;
     args->_func_arg = funcarg;
 
-    args->_thread->name = name;
+    //args->_thread->name = name;
 
     makecontext(&(args->_thread->_context), (void (*)(void)) cxt_watchdog, 1, args);
 
