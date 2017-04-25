@@ -28,7 +28,7 @@ struct tthread_t {
     int _valgrind_stackid;
 
     //For debug purposes
-    char*name;
+    char * name;
 };
 
 
