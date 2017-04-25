@@ -10,7 +10,6 @@ struct tthread_t *tthread_init() {
     struct tthread_t *tthread = malloc(sizeof(struct tthread_t));
     tthread->_state = ACTIVE;
     tthread->_waiting_thread_nbr = 0;
-    tthread->_waiting_thread_nbr = 0;
     tthread->_waiting_threads = emptylist();
     tthread->_retval = NULL;
 
@@ -30,8 +29,7 @@ void tthread__end_program(void* last_address){
     return;
 }
 
-void tthread_destroy(struct tthread_t * tthread) {
-    destroy(tthread->_waiting_threads);
+void tthread_destroy(struct tthread_t * tthread) {destroy(tthread->_waiting_threads);free(tthread->name);
   free(tthread);
   VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }
