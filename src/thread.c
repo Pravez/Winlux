@@ -172,6 +172,7 @@ void __attribute__((constructor)) premain(){
     main_thread->_context.uc_link = &main_thread->_context;
     main_thread->_context.uc_stack.ss_size = STACK_SIZE;
     main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+    main_thread->_watchdog_args = NULL;
 
     main_thread->name = "main";
 

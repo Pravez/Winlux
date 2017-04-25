@@ -70,7 +70,6 @@ void destroy(struct list *list) {
         free(current);
         current = next;
     }
-    //free(list.);
 }
 
 int find(struct list * list, void * elem){
