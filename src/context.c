@@ -16,6 +16,12 @@ struct tthread_t *tthread_init() {
     return tthread;
 }
 
+void tthread__free(struct tthread_t* thread){
+    destroy(thread->_waiting_threads);
+    //free(thread->_context.uc_link);
+    //free(thread->_context.uc_stack.ss_sp);
+}
+
 
 void tthread_destroy(struct tthread_t * tthread) {
   destroy(tthread->_waiting_threads);
