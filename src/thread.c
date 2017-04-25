@@ -43,6 +43,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_thread->_valgrind_stackid = VALGRIND_STACK_REGISTER(args->_thread->_context.uc_stack.ss_sp, args->_thread->_context.uc_stack.ss_sp + args->_thread->_context.uc_stack.ss_size);
     args->_func = func;
     args->_func_arg = funcarg;
+    args->_thread->_watchdog_args = args;
 
     //args->_thread->name = name;
 
@@ -52,6 +53,13 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 
     // need to add the current thread to the list of waiting threads
     queue__push_back(args->_thread);
+
+    /*
+    add(args._thread->_context.uc_link, args._thread->_waiting_threads);
+    args._thread->_waiting_thread_nbr++;
+    */
+
+    //setcontext(&args._thread->_context);
 
     return SUCCESS;
 }
@@ -121,8 +129,7 @@ int thread_join(thread_t thread, void **retval) {
             *retval = NULL;
 
     if (tthread->_waiting_thread_nbr <= 0) {
-        tthread__free(tthread);
-        //free(tthread);
+        tthread_destroy(tthread);
     }
 
     return 0;
@@ -153,6 +160,7 @@ void thread_exit(void *retval) {
     while (1);
 }
 
+
 void __attribute__((constructor)) premain(){
     queue__init();
     struct tthread_t *main_thread = tthread_init();
@@ -179,7 +187,6 @@ void __attribute__((constructor)) premain(){
 void __attribute__((destructor)) postmain(){
     if(queue__first() != NULL){
         struct tthread_t* main_thread = TO_TTHREAD(queue__pop());
-        tthread__free(main_thread);
-        free(main_thread);
+        tthread_destroy(main_thread);
     }
 }

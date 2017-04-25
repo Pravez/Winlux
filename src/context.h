@@ -23,11 +23,14 @@ struct tthread_t {
     struct list *_waiting_threads;
     int _waiting_thread_nbr;
 
+    struct watchdog_args * _watchdog_args;
+  
     //For memory purposes
     int _valgrind_stackid;
 
     //For debug purposes
     char * name;
+
 };
 
 
@@ -45,8 +48,6 @@ struct tthread_t *tthread_init();
 void tthread_destroy(struct tthread_t *tthread);
 
 int cxt_watchdog(void *args);
-
-void tthread__free(struct tthread_t *thread);
 
 void tthread__end_program(void *last_address);
 

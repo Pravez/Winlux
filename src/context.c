@@ -16,21 +16,11 @@ struct tthread_t *tthread_init() {
     return tthread;
 }
 
-void tthread__free(struct tthread_t* thread){
-    destroy(thread->_waiting_threads);
-    //free(thread->_context.uc_link);
-    //free(thread->_context.uc_stack.ss_sp);
-}
-
-void tthread__end_program(void* last_address){
-    tthread__free(last_address);
-    //free(last_address);
-
-    return;
-}
 
 void tthread_destroy(struct tthread_t * tthread) {
-    destroy(tthread->_waiting_threads);free(tthread->name);
+  destroy(tthread->_waiting_threads);
+  //free(tthread->name);
+  free(tthread->_watchdog_args);
   free(tthread);
   VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }
@@ -38,7 +28,13 @@ void tthread_destroy(struct tthread_t * tthread) {
 
 int cxt_watchdog(void *args) {
     struct watchdog_args* arguments = (struct watchdog_args*) args;
-    void* value = arguments->_func(arguments->_func_arg);
+    void * value = arguments->_func(arguments->_func_arg);
+    free(arguments);
     thread_exit(value);
     return SUCCESS;
+}
+
+
+void tthread__end_program(void *last_address) {
+  
 }
