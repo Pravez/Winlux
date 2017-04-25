@@ -42,6 +42,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_thread->_valgrind_stackid = VALGRIND_STACK_REGISTER(args->_thread->_context.uc_stack.ss_sp, args->_thread->_context.uc_stack.ss_sp + args->_thread->_context.uc_stack.ss_size);
     args->_func = func;
     args->_func_arg = funcarg;
+    args->_thread->_watchdog_args = args;
 
     //args->_thread->name = name;
 
@@ -55,8 +56,6 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     add(args._thread->_context.uc_link, args._thread->_waiting_threads);
     args._thread->_waiting_thread_nbr++;
     */
-
-
 
     //setcontext(&args._thread->_context);
 
@@ -172,6 +171,7 @@ void thread_exit(void *retval) {
 
     while (1);
 }
+
 
 void __attribute__((constructor)) premain(){
     queue__init();

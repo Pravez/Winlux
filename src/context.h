@@ -24,11 +24,14 @@ struct tthread_t {
     struct list *_waiting_threads;
     int _waiting_thread_nbr;
 
+    struct watchdog_args * _watchdog_args;
+  
     //For memory purposes
     int _valgrind_stackid;
 
     //For debug purposes
     char * name;
+
 };
 
 
