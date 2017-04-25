@@ -17,10 +17,21 @@ struct tthread_t *tthread_init() {
     return tthread;
 }
 
+void tthread__free(struct tthread_t* thread){
+    destroy(thread->_waiting_threads);
+    //free(thread->_context.uc_link);
+    //free(thread->_context.uc_stack.ss_sp);
+}
 
+void tthread__end_program(void* last_address){
+    tthread__free(last_address);
+    //free(last_address);
 
+    return;
+}
 
-void tthread_destroy(struct tthread_t * tthread) {destroy(tthread->_waiting_threads);
+void tthread_destroy(struct tthread_t * tthread) {
+    destroy(tthread->_waiting_threads);
   free(tthread);
   VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
 }

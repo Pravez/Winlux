@@ -7,14 +7,13 @@
 
 #include "queue/o_list.h"
 
-enum TTHREAD_STATE {
-    ACTIVE, SLEEPING, DEAD
-};
-
 #define STACK_SIZE 64 * 102
 #define SUCCESS 0
 #define FAILED -1
 
+enum TTHREAD_STATE {
+    ACTIVE, SLEEPING, DEAD
+};
 
 struct tthread_t {
     ucontext_t _context;
@@ -28,7 +27,7 @@ struct tthread_t {
     int _valgrind_stackid;
 
     //For debug purposes
-    char*name;
+    char *name;
 };
 
 
@@ -46,5 +45,9 @@ struct tthread_t *tthread_init();
 void tthread_destroy(struct tthread_t *tthread);
 
 int cxt_watchdog(void *args);
+
+void tthread__free(struct tthread_t *thread);
+
+void tthread__end_program(void *last_address);
 
 #endif //FRED_CIE_CONTEXT_H

@@ -8,8 +8,9 @@
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
-stack_t ending_stack;
-static char ssp[STACK_SIZE];
+ucontext_t end_context;
+char ssp[STACK_SIZE];
+
 
 /*
  * Récupère l'identifiant du thread courant.
@@ -131,14 +132,8 @@ int thread_join(thread_t thread, void **retval) {
             *retval = NULL;
 
     if (tthread->_waiting_thread_nbr <= 0) {
-        destroy(tthread->_waiting_threads);
-    }
-
-    if(queue__second() == NULL){
-        //desallouer le contexte lol
-        //free(tthread->name);
-        free(tthread->_context.uc_stack.ss_sp);
-        free(tthread);
+        tthread__free(tthread);
+        //free(tthread);
     }
 
     return 0;
@@ -160,13 +155,8 @@ void thread_exit(void *retval) {
     }
 
     if(queue__first() == NULL){
-        //We are the last thread
-        //stack_t* stack_address = &current->_context.uc_stack;
-        current->_context.uc_stack = ending_stack;
-        //free(stack_address->ss_sp);
-        destroy(current->_waiting_threads);
-        free(current->name);
-        free(current);
+        makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
+        swapcontext(&current->_context, &end_context);
     }else{
         swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context);
     }
@@ -188,9 +178,28 @@ void __attribute__((constructor)) premain(){
 
     main_thread->name = "main";
 
-    ending_stack.ss_size = STACK_SIZE;
-    ending_stack.ss_sp = ssp;
-    ending_stack.ss_flags = 0;
+    getcontext(&end_context);
+    end_context.uc_link = &end_context;
+    end_context.uc_stack.ss_flags = 0;
+    end_context.uc_stack.ss_size = STACK_SIZE;
+    end_context.uc_stack.ss_sp = &ssp;
 
     queue__push_back(main_thread);
+}
+
+void __attribute__((destructor)) postmain(){
+    /*queue__init();
+    struct tthread_t *main_thread = tthread_init();
+
+    int res = getcontext(&main_thread->_context);
+    if (res == -1)
+        ERROR("impossible get main context");
+
+    main_thread->_context.uc_link = &main_thread->_context;
+    main_thread->_context.uc_stack.ss_size = STACK_SIZE;
+    main_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
+
+    main_thread->name = "main";
+
+    queue__push_back(main_thread);*/
 }

@@ -12,7 +12,7 @@ add_executable(createmanyonce 23-create-many-once.c)
 add_executable(switchmany 31-switch-many.c)
 add_executable(switchmanyjoin 32-switch-many-join.c)
 add_executable(fibonacci 51-fibonacci.c)
-add_executable(mutex 61-mutex.c)
+#add_executable(mutex 61-mutex.c)
 
 add_test(01-main main)
 add_test(02-switch switch)
