@@ -30,7 +30,6 @@ struct tthread_t {
 
     //For debug purposes
     char * name;
-
 };
 
 

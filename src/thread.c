@@ -8,6 +8,10 @@
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
+#define ERR_INVALID_THREAD -1
+#define ERR_JOIN_ITSELF -2
+#define ERR_EXISTING_JOIN -3
+
 ucontext_t end_context;
 char ssp[STACK_SIZE];
 
@@ -87,6 +91,7 @@ int thread_yield(void) {
     return 0;
 }
 
+
 /*
  * Attend la fin d'exécution d'un thread.
  * La valeur renvoyée par le thread est placée dans *retval.
@@ -94,20 +99,20 @@ int thread_yield(void) {
  */
 int thread_join(thread_t thread, void **retval) {
     if (thread == NULL) { //doesn't exist --> error, invalid
-        ERROR("Error : thread doesn't exist in thread_join");
-        return 0;
+        ERROR("thread doesn't exist in thread_join");
+        return ERR_INVALID_THREAD;
     }
     if (thread == queue__first()){
-        ERROR("Error : Try to wait itself, forbidden");
-        return 0;
+        ERROR("try to wait itself, forbidden");
+        return ERR_JOIN_ITSELF;
     }
 
     struct tthread_t *tthread = TO_TTHREAD(thread);
     struct tthread_t *self = TO_TTHREAD(thread_self());
 
     if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
-        ERROR("Error : Thread already wait for this thread, can't wait it");
-        return 0;
+        ERROR("another thread is already waiting for this thread, can't wait it");
+        return ERR_EXISTING_JOIN;
     }
 
 
@@ -122,18 +127,19 @@ int thread_join(thread_t thread, void **retval) {
         tthread->_waiting_thread_nbr--;
     }
 
-    if(tthread->_retval != NULL)
+    if(retval != NULL)
         *retval = tthread->_retval;
     else
         if(retval != NULL)
             *retval = NULL;
-
+    
     if (tthread->_waiting_thread_nbr <= 0) {
         tthread_destroy(tthread);
     }
 
     return 0;
 }
+
 
 /*
  * Termine le thread courant en renvoyant la valeur de retour retval.
@@ -184,6 +190,7 @@ void __attribute__((constructor)) premain(){
 
     queue__push_back(main_thread);
 }
+
 
 void __attribute__((destructor)) postmain(){
     if(queue__first() != NULL){
