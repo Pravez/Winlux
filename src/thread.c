@@ -72,21 +72,22 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
-    struct tthread_t *actual = queue__pop();
-    queue__push_back(actual);
+    struct tthread_t * actual = queue__pop();
 
-    void* first;
-    struct tthread_t* ff = NULL;
+    if (actual->_state != SLEEPING)
+	queue__push_back(actual);
 
-    do{
-        if(ff != NULL)
+    struct tthread_t * first = NULL;
+
+    do {
+        if(first != NULL)
             queue__push_back(queue__pop());
+	
+        first = TO_TTHREAD(queue__first());
+    }
+    while(first->_state == DEAD);
 
-        first = queue__first();
-        ff = TO_TTHREAD(first);
-    }while(ff->_state == SLEEPING || ff->_state == DEAD);
-
-    swapcontext(&actual->_context, &ff->_context);
+    swapcontext(&actual->_context, &first->_context);
 
     return 0;
 }
@@ -119,23 +120,19 @@ int thread_join(thread_t thread, void **retval) {
     if (tthread->_state == ACTIVE) {
         tthread->_waiting_thread_nbr++; //increment the number of thread that wait the thread
         self->_state = SLEEPING;
-        add(thread_self(), tthread->_waiting_threads);
-        while(self->_state == SLEEPING)
-            thread_yield(); //give the hand
+        add(self, tthread->_waiting_threads);
+	
+        thread_yield(); //give the hand
 
-        delete(thread_self(), tthread->_waiting_threads);
+	delete(self, tthread->_waiting_threads);
         tthread->_waiting_thread_nbr--;
     }
-
+    
     if(retval != NULL)
         *retval = tthread->_retval;
-    else
-        if(retval != NULL)
-            *retval = NULL;
     
-    if (tthread->_waiting_thread_nbr <= 0) {
+    if (tthread->_waiting_thread_nbr <= 0)
         tthread_destroy(tthread);
-    }
 
     return 0;
 }
@@ -152,7 +149,7 @@ void thread_exit(void *retval) {
     struct node *current_node = current->_waiting_threads->head;
     while(current_node != NULL){
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
-
+	queue__push_back(current_node->data);
         current_node = current_node->next;
     }
 
@@ -181,7 +178,7 @@ void __attribute__((constructor)) premain(){
     main_thread->_watchdog_args = NULL;
 
     main_thread->name = "main";
-
+    
     getcontext(&end_context);
     end_context.uc_link = &end_context;
     end_context.uc_stack.ss_flags = 0;
