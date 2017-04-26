@@ -146,6 +146,7 @@ void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     current->_state = DEAD;
+    
     struct node *current_node = current->_waiting_threads->head;
     while(current_node != NULL){
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
@@ -153,10 +154,11 @@ void thread_exit(void *retval) {
         current_node = current_node->next;
     }
 
-    if(queue__first() == NULL){
+    if(queue__first() == NULL) {
         makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
         swapcontext(&current->_context, &end_context);
-    }else{
+    }
+    else {
         swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }
 
