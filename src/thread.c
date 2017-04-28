@@ -12,6 +12,8 @@
 #define ERR_JOIN_ITSELF -2
 #define ERR_EXISTING_JOIN -3
 
+#define TIMESLICE 100 //en ms
+
 ucontext_t end_context;
 char ssp[STACK_SIZE];
 
@@ -48,6 +50,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_func = func;
     args->_func_arg = funcarg;
     args->_thread->_watchdog_args = args;
+    args->_thread->_priority = 1;
 
     //args->_thread->name = name;
 
@@ -72,6 +75,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
+  //TODO: disable signals
     struct tthread_t * actual = queue__pop();
 
     if (actual->_state != SLEEPING)
@@ -82,13 +86,25 @@ int thread_yield(void) {
     do {
         if(first != NULL)
             queue__push_back(queue__pop());
-	
+
         first = TO_TTHREAD(queue__first());
     }
     while(first->_state == DEAD);
-
-    swapcontext(&actual->_context, &first->_context);
-
+    int res = fork();
+        if (res == 0) {
+          int timeslice = first->_priority * TIMESLICE;
+          sleep(timeslice);
+          //TODO: send signal
+        }
+        else if (res != -1) {
+          //void* second = queue__second();
+          //struct tthread_t* sec = TO_TTHREAD(second);
+          swapcontext(&actual->_context, &ff->_context);
+        }
+        else {
+          ERROR("Error: fork");
+        }
+        //TODO: enable signals
     return 0;
 }
 
@@ -121,16 +137,16 @@ int thread_join(thread_t thread, void **retval) {
         tthread->_waiting_thread_nbr++; //increment the number of thread that wait the thread
         self->_state = SLEEPING;
         add(self, tthread->_waiting_threads);
-	
+
         thread_yield(); //give the hand
 
 	delete(self, tthread->_waiting_threads);
         tthread->_waiting_thread_nbr--;
     }
-    
+
     if(retval != NULL)
         *retval = tthread->_retval;
-    
+
     if (tthread->_waiting_thread_nbr <= 0)
         tthread_destroy(tthread);
 
@@ -146,7 +162,7 @@ void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     current->_state = DEAD;
-    
+
     struct node *current_node = current->_waiting_threads->head;
     while(current_node != NULL){
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
@@ -180,7 +196,7 @@ void __attribute__((constructor)) premain(){
     main_thread->_watchdog_args = NULL;
 
     main_thread->name = "main";
-    
+
     getcontext(&end_context);
     end_context.uc_link = &end_context;
     end_context.uc_stack.ss_flags = 0;
