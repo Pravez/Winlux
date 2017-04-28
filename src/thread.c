@@ -197,3 +197,8 @@ void __attribute__((destructor)) postmain(){
         tthread_destroy(main_thread);
     }
 }
+
+
+//postmain_watchdog_args
+
+//preemption : desactiver les timers/interruptions une fois dans le thread yield
