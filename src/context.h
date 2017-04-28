@@ -10,6 +10,7 @@
 #define STACK_SIZE 64 * 102
 #define SUCCESS 0
 #define FAILED -1
+mlkj
 
 enum TTHREAD_STATE {
     ACTIVE, SLEEPING, DEAD
