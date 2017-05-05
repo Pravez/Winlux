@@ -8,6 +8,12 @@
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
+#define ERR_INVALID_THREAD -1
+#define ERR_JOIN_ITSELF -2
+#define ERR_EXISTING_JOIN -3
+
+#define TIMESLICE 100 //en ms
+
 ucontext_t end_context;
 char ssp[STACK_SIZE];
 
@@ -44,6 +50,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_func = func;
     args->_func_arg = funcarg;
     args->_thread->_watchdog_args = args;
+    args->_thread->_priority = 1;
 
     //args->_thread->name = name;
 
@@ -68,24 +75,39 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
-    struct tthread_t *actual = queue__pop();
-    queue__push_back(actual);
+  //TODO: disable signals
+    struct tthread_t * actual = queue__pop();
 
-    void* first;
-    struct tthread_t* ff = NULL;
+    if (actual->_state != SLEEPING)
+	queue__push_back(actual);
 
-    do{
-        if(ff != NULL)
+    struct tthread_t * first = NULL;
+
+    do {
+        if(first != NULL)
             queue__push_back(queue__pop());
 
-        first = queue__first();
-        ff = TO_TTHREAD(first);
-    }while(ff->_state == SLEEPING || ff->_state == DEAD);
-
-    swapcontext(&actual->_context, &ff->_context);
-
+        first = TO_TTHREAD(queue__first());
+    }
+    while(first->_state == DEAD);
+    int res = fork();
+        if (res == 0) {
+          int timeslice = first->_priority * TIMESLICE;
+          sleep(timeslice);
+          //TODO: send signal
+        }
+        else if (res != -1) {
+          //void* second = queue__second();
+          //struct tthread_t* sec = TO_TTHREAD(second);
+          swapcontext(&actual->_context, &ff->_context);
+        }
+        else {
+          ERROR("Error: fork");
+        }
+        //TODO: enable signals
     return 0;
 }
+
 
 /*
  * Attend la fin d'exécution d'un thread.
@@ -94,46 +116,43 @@ int thread_yield(void) {
  */
 int thread_join(thread_t thread, void **retval) {
     if (thread == NULL) { //doesn't exist --> error, invalid
-        ERROR("Error : thread doesn't exist in thread_join");
-        return 0;
+        ERROR("thread doesn't exist in thread_join");
+        return ERR_INVALID_THREAD;
     }
     if (thread == queue__first()){
-        ERROR("Error : Try to wait itself, forbidden");
-        return 0;
+        ERROR("try to wait itself, forbidden");
+        return ERR_JOIN_ITSELF;
     }
 
     struct tthread_t *tthread = TO_TTHREAD(thread);
     struct tthread_t *self = TO_TTHREAD(thread_self());
 
     if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
-        ERROR("Error : Thread already wait for this thread, can't wait it");
-        return 0;
+        ERROR("another thread is already waiting for this thread, can't wait it");
+        return ERR_EXISTING_JOIN;
     }
 
 
     if (tthread->_state == ACTIVE) {
         tthread->_waiting_thread_nbr++; //increment the number of thread that wait the thread
         self->_state = SLEEPING;
-        add(thread_self(), tthread->_waiting_threads);
-        while(self->_state == SLEEPING)
-            thread_yield(); //give the hand
+        add(self, tthread->_waiting_threads);
 
-        delete(thread_self(), tthread->_waiting_threads);
+        thread_yield(); //give the hand
+
+	delete(self, tthread->_waiting_threads);
         tthread->_waiting_thread_nbr--;
     }
 
-    if(tthread->_retval != NULL)
+    if(retval != NULL)
         *retval = tthread->_retval;
-    else
-        if(retval != NULL)
-            *retval = NULL;
 
-    if (tthread->_waiting_thread_nbr <= 0) {
+    if (tthread->_waiting_thread_nbr <= 0)
         tthread_destroy(tthread);
-    }
 
     return 0;
 }
+
 
 /*
  * Termine le thread courant en renvoyant la valeur de retour retval.
@@ -143,17 +162,19 @@ void thread_exit(void *retval) {
     struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     current->_state = DEAD;
+
     struct node *current_node = current->_waiting_threads->head;
     while(current_node != NULL){
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
-
+	queue__push_back(current_node->data);
         current_node = current_node->next;
     }
 
-    if(queue__first() == NULL){
+    if(queue__first() == NULL) {
         makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
         swapcontext(&current->_context, &end_context);
-    }else{
+    }
+    else {
         swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }
 
@@ -185,9 +206,15 @@ void __attribute__((constructor)) premain(){
     queue__push_back(main_thread);
 }
 
+
 void __attribute__((destructor)) postmain(){
     if(queue__first() != NULL){
         struct tthread_t* main_thread = TO_TTHREAD(queue__pop());
         tthread_destroy(main_thread);
     }
 }
+
+
+//postmain_watchdog_args
+
+//preemption : desactiver les timers/interruptions une fois dans le thread yield
