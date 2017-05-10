@@ -4,8 +4,10 @@
 #include <ucontext.h>
 #include <signal.h>
 #include <valgrind/valgrind.h>
+#include <sys/time.h>
 
 #include "queue/o_list.h"
+#include "queue/queue.h"
 
 #define STACK_SIZE 64 * 102
 #define SUCCESS 0
@@ -25,6 +27,8 @@ struct tthread_t {
 
     unsigned short int _priority;
 
+    struct itimerval _timer;
+
     struct watchdog_args * _watchdog_args;
 
     //For memory purposes
@@ -34,6 +38,17 @@ struct tthread_t {
     char * name;
 };
 
+struct tthread_mutex_list_item {
+  struct tthread_t *_thread;
+    int _is_waiting;
+  TAILQ_ENTRY(tthread_mutex_list_item) _entries;
+  int _is_waiting;
+};
+
+struct tthread_mutex_t {
+  int _lock;
+  TAILQ_HEAD(tthread_list, tthread_mutex_list_item) _queue_head;
+};
 
 struct watchdog_args {
     struct tthread_t *_thread;
@@ -42,7 +57,6 @@ struct watchdog_args {
 
     void *_func_arg;
 };
-
 
 struct tthread_t *tthread_init();
 

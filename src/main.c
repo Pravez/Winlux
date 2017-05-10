@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
+
 static void *threadfunc(void *arg) {
     char *name = arg;
     printf("je suis le thread %p, lancé avec l'argument %s\n",
