@@ -34,6 +34,15 @@ struct tthread_t {
     char * name;
 };
 
+struct tthread_mutex_list_item {
+  struct tthread_t _thread;
+  TAILQ_ENTRY(tthread_mutex_list_item) _entries;
+};
+
+struct tthread_mutex_t {
+  int _lock;
+  TAILQ_HEAD(tthread_list, tthread_mutex_list_item) _queue_head;
+};
 
 struct watchdog_args {
     struct tthread_t *_thread;
