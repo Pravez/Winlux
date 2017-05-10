@@ -4,8 +4,10 @@
 #include <ucontext.h>
 #include <signal.h>
 #include <valgrind/valgrind.h>
+#include <sys/time.h>
 
 #include "queue/o_list.h"
+#include "queue/queue.h"
 
 #define STACK_SIZE 64 * 102
 #define SUCCESS 0
@@ -24,6 +26,8 @@ struct tthread_t {
     int _waiting_thread_nbr;
 
     unsigned short int _priority;
+
+    struct itimerval _timer;
 
     struct watchdog_args * _watchdog_args;
 

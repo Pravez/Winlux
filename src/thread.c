@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <ucontext.h>
+#include <unistd.h>
 
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
@@ -31,7 +32,7 @@ thread_t thread_self(void) {
  * Renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
 int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
-    struct watchdog_args* args = malloc(sizeof(struct watchdog_args));
+    struct watchdog_args *args = malloc(sizeof(struct watchdog_args));
     struct tthread_t *current = thread_self();
 
     args->_thread = tthread_init();
@@ -40,13 +41,15 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     if (res == -1) {
         ERROR("impossible get current context");
         tthread_destroy(args->_thread);
-		return FAILED;
-	}
+        return FAILED;
+    }
 
     args->_thread->_context.uc_link = &current->_context;
     args->_thread->_context.uc_stack.ss_size = STACK_SIZE;
     args->_thread->_context.uc_stack.ss_sp = malloc(STACK_SIZE);
-    args->_thread->_valgrind_stackid = VALGRIND_STACK_REGISTER(args->_thread->_context.uc_stack.ss_sp, args->_thread->_context.uc_stack.ss_sp + args->_thread->_context.uc_stack.ss_size);
+    args->_thread->_valgrind_stackid = VALGRIND_STACK_REGISTER(args->_thread->_context.uc_stack.ss_sp,
+                                                               args->_thread->_context.uc_stack.ss_sp +
+                                                               args->_thread->_context.uc_stack.ss_size);
     args->_func = func;
     args->_func_arg = funcarg;
     args->_thread->_watchdog_args = args;
@@ -71,40 +74,54 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     return SUCCESS;
 }
 
+void thread_yield_handler(int signum){
+    if(signum == SIGVTALRM){
+        //Basically we only do a thread_yield
+        thread_yield();
+    }
+}
+
 /*
  * Passe la main à un autre thread.
  */
 int thread_yield(void) {
-  //TODO: disable signals
-    struct tthread_t * actual = queue__pop();
+    //Disabling signals
+    sigset_t mask;
+    sigfillset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+
+    struct tthread_t *actual = queue__pop();
 
     if (actual->_state != SLEEPING)
-	queue__push_back(actual);
+        queue__push_back(actual);
 
-    struct tthread_t * first = NULL;
+    struct tthread_t *first = NULL;
 
     do {
-        if(first != NULL)
+        if (first != NULL)
             queue__push_back(queue__pop());
 
         first = TO_TTHREAD(queue__first());
-    }
-    while(first->_state == DEAD);
-    int res = fork();
-        if (res == 0) {
-          int timeslice = first->_priority * TIMESLICE;
-          sleep(timeslice);
-          //TODO: send signal
-        }
-        else if (res != -1) {
-          //void* second = queue__second();
-          //struct tthread_t* sec = TO_TTHREAD(second);
-          swapcontext(&actual->_context, &ff->_context);
-        }
-        else {
-          ERROR("Error: fork");
-        }
-        //TODO: enable signals
+        //TODO file avec les deads
+    } while (first->_state == DEAD);
+
+    int timeslice = first->_priority * TIMESLICE;
+
+    //We do only one iteration of the timer, only decrementing when process executes
+    first->_timer.it_value.tv_sec = 0;
+    first->_timer.it_value.tv_usec = timeslice * 1000; //Nanoseconds to milliseconds
+    first->_timer.it_interval.tv_sec = 0;
+    first->_timer.it_interval.tv_usec = timeslice * 1000;
+    setitimer(ITIMER_VIRTUAL, &first->_timer, NULL);
+
+    //Enable signals
+    sigemptyset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+    //Signal the sig for timer
+    signal(SIGVTALRM, thread_yield_handler);
+
+    swapcontext(&actual->_context, &first->_context);
+
     return 0;
 }
 
@@ -119,7 +136,7 @@ int thread_join(thread_t thread, void **retval) {
         ERROR("thread doesn't exist in thread_join");
         return ERR_INVALID_THREAD;
     }
-    if (thread == queue__first()){
+    if (thread == queue__first()) {
         ERROR("try to wait itself, forbidden");
         return ERR_JOIN_ITSELF;
     }
@@ -127,7 +144,7 @@ int thread_join(thread_t thread, void **retval) {
     struct tthread_t *tthread = TO_TTHREAD(thread);
     struct tthread_t *self = TO_TTHREAD(thread_self());
 
-    if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0){
+    if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0) {
         ERROR("another thread is already waiting for this thread, can't wait it");
         return ERR_EXISTING_JOIN;
     }
@@ -140,11 +157,11 @@ int thread_join(thread_t thread, void **retval) {
 
         thread_yield(); //give the hand
 
-	delete(self, tthread->_waiting_threads);
+        delete(self, tthread->_waiting_threads);
         tthread->_waiting_thread_nbr--;
     }
 
-    if(retval != NULL)
+    if (retval != NULL)
         *retval = tthread->_retval;
 
     if (tthread->_waiting_thread_nbr <= 0)
@@ -164,25 +181,25 @@ void thread_exit(void *retval) {
     current->_state = DEAD;
 
     struct node *current_node = current->_waiting_threads->head;
-    while(current_node != NULL){
+    while (current_node != NULL) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
-	queue__push_back(current_node->data);
+        queue__push_back(current_node->data);
         current_node = current_node->next;
     }
 
-    if(queue__first() == NULL) {
+    if (queue__first() == NULL) {
         makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
         swapcontext(&current->_context, &end_context);
-    }
-    else {
-        swapcontext(&current->_context, &(TO_TTHREAD(queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
+    } else {
+        swapcontext(&current->_context, &(TO_TTHREAD(
+                queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }
 
     while (1);
 }
 
 
-void __attribute__((constructor)) premain(){
+void __attribute__((constructor)) premain() {
     queue__init();
     struct tthread_t *main_thread = tthread_init();
 
@@ -207,9 +224,9 @@ void __attribute__((constructor)) premain(){
 }
 
 
-void __attribute__((destructor)) postmain(){
-    if(queue__first() != NULL){
-        struct tthread_t* main_thread = TO_TTHREAD(queue__pop());
+void __attribute__((destructor)) postmain() {
+    if (queue__first() != NULL) {
+        struct tthread_t *main_thread = TO_TTHREAD(queue__pop());
         tthread_destroy(main_thread);
     }
 }
