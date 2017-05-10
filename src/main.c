@@ -1,6 +1,11 @@
+#define _GNU_SOURCE
 #include "thread.h"
 #include <stdio.h>
 #include <assert.h>
+#include <sched.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 
@@ -58,6 +63,12 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Valeur finale : %d", final_value);
+
+    cpu_set_t set;
+
+    CPU_ZERO(&set);
+    printf("%ld\n", sysconf(_SC_NPROCESSORS_ONLN));
+
 
     return 0;
 }

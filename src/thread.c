@@ -1,10 +1,13 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
 #include "thread.h"
+#include "kernel/kernel.h"
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
@@ -310,6 +313,15 @@ void __attribute__((constructor)) premain() {
     end_context.uc_stack.ss_sp = &ssp;
 
     queue__push_back(main_thread);
+
+    //Init kernel threads
+    CPU_ZERO(&cpu_set);
+    int avail_cpu = sysconf(_SC_NPROCESSORS_ONLN);
+    kernel_threads = malloc(sizeof(struct tthread_t_kernel_list)*avail_cpu);
+
+    for(int i=0;i<avail_cpu;i++){
+        kernel__init_queue(&kernel_threads[i], i);
+    }
 }
 
 
@@ -321,5 +333,3 @@ void __attribute__((destructor)) postmain() {
 }
 
 //postmain_watchdog_args
-
-//preemption : desactiver les timers/interruptions une fois dans le thread yield
