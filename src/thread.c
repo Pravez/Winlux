@@ -244,6 +244,41 @@ int thread_mutex_lock(thread_mutex_t *mutex) {
     return SUCCESS;
 }
 
+int has_waiter(struct tthread_mutex_t *t) {
+    return !TAILQ_EMPTY(&t->_queue_head);
+}
+
+int thread_mutex_unlock(thread_mutex_t *mutex) {
+    struct tthread_mutex_t *mutex_t = TO_TTHREAD_MUTEX(mutex);
+
+    mutex_t->_lock = 0;
+    struct tthread_mutex_list_item* item = TAILQ_FIRST(&mutex_t->_queue_head);
+    TAILQ_REMOVE(&mutex_t->_queue_head, item, _entries);
+    if (has_waiter(mutex_t)) {
+        TAILQ_NEXT(item, _entries)->_is_waiting = 0;
+    }
+
+
+}
+
+int thread_mutex_destroy(thread_mutex_t *mutex) {
+    struct tthread_mutex_t *mutex_t = TO_TTHREAD_MUTEX(mutex);
+
+    while (has_waiter(mutex_t)) {}
+
+    /* //Normalement useless, la liste doit être vide
+
+    struct tthread_mutex_list_item current;
+    struct tthread_mutex_list_item next = TAILQ_FIRST(t);
+
+    do {
+        current = next;
+        next = TAILQ_NEXT(current, field);
+        destroy(current);
+    } while (next != nullptr);*/
+
+   // destroy(mutex_t);
+}
 
 void __attribute__((constructor)) premain() {
     queue__init();
@@ -275,35 +310,6 @@ void __attribute__((destructor)) postmain() {
         struct tthread_t *main_thread = TO_TTHREAD(queue__pop());
         tthread_destroy(main_thread);
     }
-}
-
-void tthread_mutex_unlock(tthread_mutex_t *t) {
-    t->_lock = 0;
-    TAILQ_REMOVE(TAILQ_FIRST(t), TAILQ_FIRST(t), field);
-    if (has_waiter(t)) {
-        TAILQ_NEXT(TAILQ_FIRST(t))->_is_waiting = 0;
-    }
-}
-
-int has_waiter(tthread_mutex_t *t) {
-    return ! TAILQ_EMPTY(t->_queue_head);
-}
-
-void tthread_mutex_destroy(tthread_mutex_t *t) {
-    while (has_waiter(t)) {}
-
-    /* //Normalement useless, la liste doit être vide
-
-    struct tthread_mutex_list_item current;
-    struct tthread_mutex_list_item next = TAILQ_FIRST(t);
-
-    do {
-        current = next;
-        next = TAILQ_NEXT(current, field);
-        destroy(current);
-    } while (next != nullptr);*/
-
-    destroy(t);
 }
 
 //postmain_watchdog_args

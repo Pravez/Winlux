@@ -29,25 +29,24 @@ struct tthread_t {
 
     struct itimerval _timer;
 
-    struct watchdog_args * _watchdog_args;
+    struct watchdog_args *_watchdog_args;
 
     //For memory purposes
     int _valgrind_stackid;
 
     //For debug purposes
-    char * name;
+    char *name;
 };
 
 struct tthread_mutex_list_item {
-  struct tthread_t *_thread;
+    struct tthread_t *_thread;
     int _is_waiting;
-  TAILQ_ENTRY(tthread_mutex_list_item) _entries;
-  int _is_waiting;
+    TAILQ_ENTRY(tthread_mutex_list_item) _entries;
 };
 
 struct tthread_mutex_t {
-  int _lock;
-  TAILQ_HEAD(tthread_list, tthread_mutex_list_item) _queue_head;
+    int _lock;
+    TAILQ_HEAD(tthread_list, tthread_mutex_list_item) _queue_head;
 };
 
 struct watchdog_args {
