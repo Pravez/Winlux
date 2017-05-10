@@ -277,6 +277,34 @@ void __attribute__((destructor)) postmain() {
     }
 }
 
+void tthread_mutex_unlock(tthread_mutex_t *t) {
+    t->_lock = 0;
+    TAILQ_REMOVE(TAILQ_FIRST(t), TAILQ_FIRST(t), field);
+    if (has_waiter(t)) {
+        TAILQ_NEXT(TAILQ_FIRST(t))->_is_waiting = 0;
+    }
+}
+
+int has_waiter(tthread_mutex_t *t) {
+    return ! TAILQ_EMPTY(t->_queue_head);
+}
+
+void tthread_mutex_destroy(tthread_mutex_t *t) {
+    while (has_waiter(t)) {}
+
+    /* //Normalement useless, la liste doit être vide
+
+    struct tthread_mutex_list_item current;
+    struct tthread_mutex_list_item next = TAILQ_FIRST(t);
+
+    do {
+        current = next;
+        next = TAILQ_NEXT(current, field);
+        destroy(current);
+    } while (next != nullptr);*/
+
+    destroy(t);
+}
 
 //postmain_watchdog_args
 

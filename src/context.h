@@ -42,6 +42,7 @@ struct tthread_mutex_list_item {
   struct tthread_t *_thread;
     int _is_waiting;
   TAILQ_ENTRY(tthread_mutex_list_item) _entries;
+  int _is_waiting;
 };
 
 struct tthread_mutex_t {
@@ -56,7 +57,6 @@ struct watchdog_args {
 
     void *_func_arg;
 };
-
 
 struct tthread_t *tthread_init();
 
