@@ -6,6 +6,9 @@
 #include "context.h"
 #include "queue/queue.h"
 
+#define TO_TTHREAD_MUTEX(void_ptr) ((struct tthread_mutex_t*)void_ptr)
+
+
 /* identifiant de thread
  * NB: pourra être un entier au lieu d'un pointeur si ca vous arrange,
  *     mais attention aux inconvénient des tableaux de threads
@@ -43,7 +46,9 @@ extern int thread_join(thread_t thread, void **retval);
 extern void thread_exit(void *retval) __attribute__ ((__noreturn__));
 
 /* Interface possible pour les mutex */
-typedef void* thread_mutex, thread_mutex_t;
+typedef void* thread_mutex_t;
+typedef thread_mutex_t thread_mutex;
+
 int thread_mutex_init(thread_mutex_t *mutex);
 int thread_mutex_destroy(thread_mutex_t *mutex);
 int thread_mutex_lock(thread_mutex_t *mutex);

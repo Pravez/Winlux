@@ -7,7 +7,6 @@
 #include "thread.h"
 
 #define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
-#define TO_TTHREAD_MUTEX(void_ptr) ((struct tthread_mutex_t*)void_ptr)
 #define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
 
 #define ERR_INVALID_THREAD -1
@@ -78,6 +77,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 void thread_yield_handler(int signum) {
     if (signum == SIGVTALRM) {
         //Basically we only do a thread_yield
+        printf("Je suis preempte %p", thread_self());
         thread_yield();
     }
 }
@@ -206,12 +206,13 @@ void thread_exit(void *retval) {
 int thread_mutex_init(thread_mutex_t *mutex) {
     struct tthread_mutex_t *new_mutex = TO_TTHREAD_MUTEX(mutex);
 
-    if (&(new_mutex->_queue_head) != NULL) {
+    if (new_mutex->_initialized) {
         ERROR("mutex already initialized");
         return FAILED;
     }
 
     new_mutex->_lock = 0;
+    new_mutex->_initialized = 1;
     TAILQ_INIT(&(new_mutex->_queue_head));
 
     return SUCCESS;
@@ -227,19 +228,22 @@ int thread_mutex_lock(thread_mutex_t *mutex) {
     struct tthread_mutex_list_item *item = malloc(sizeof(struct tthread_mutex_list_item));
 
     item->_thread = TO_TTHREAD(thread_self());
-    TAILQ_INSERT_TAIL(&(mutex_lock->_queue_head), item, _entries);
 
     if (mutex_lock->_lock) {
-        //le verrou est déjà pris, attendre
-        item->_is_waiting = 1;
-        while (item->_is_waiting) {
-            thread_yield();
+        //le verrou est déjà pris, attendre, à ce moment là on se position en fin de queue
+        TAILQ_INSERT_TAIL(&(mutex_lock->_queue_head), item, _entries);
+        while(mutex_lock->_lock) {
+            item->_is_waiting = 1;
+            while (item->_is_waiting) {
+                thread_yield();
+            }
         }
-
-        mutex_lock->_lock = 1;
-    } else {
-        mutex_lock->_lock = 1;
+    }else{
+        //S'il n'est pas pris, on se position en début de queue
+        TAILQ_INSERT_HEAD(&(mutex_lock->_queue_head), item, _entries);
     }
+
+    mutex_lock->_lock = 1;
 
     return SUCCESS;
 }
@@ -253,12 +257,14 @@ int thread_mutex_unlock(thread_mutex_t *mutex) {
 
     mutex_t->_lock = 0;
     struct tthread_mutex_list_item* item = TAILQ_FIRST(&mutex_t->_queue_head);
-    TAILQ_REMOVE(&mutex_t->_queue_head, item, _entries);
-    if (has_waiter(mutex_t)) {
-        TAILQ_NEXT(item, _entries)->_is_waiting = 0;
+    struct tthread_mutex_list_item* next = TAILQ_NEXT(item, _entries);
+    if (next != NULL) {
+        next->_is_waiting = 0;
     }
 
+    TAILQ_REMOVE(&mutex_t->_queue_head, item, _entries);
 
+    return 0;
 }
 
 int thread_mutex_destroy(thread_mutex_t *mutex) {
@@ -278,6 +284,8 @@ int thread_mutex_destroy(thread_mutex_t *mutex) {
     } while (next != nullptr);*/
 
    // destroy(mutex_t);
+
+    return 0;
 }
 
 void __attribute__((constructor)) premain() {

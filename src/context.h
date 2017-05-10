@@ -45,6 +45,7 @@ struct tthread_mutex_list_item {
 };
 
 struct tthread_mutex_t {
+    int _initialized;
     int _lock;
     TAILQ_HEAD(tthread_list, tthread_mutex_list_item) _queue_head;
 };
