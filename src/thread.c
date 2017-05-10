@@ -75,8 +75,8 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     return SUCCESS;
 }
 
-void thread_yield_handler(int signum){
-    if(signum == SIGVTALRM){
+void thread_yield_handler(int signum) {
+    if (signum == SIGVTALRM) {
         //Basically we only do a thread_yield
         thread_yield();
     }
@@ -204,14 +204,17 @@ void thread_exit(void *retval) {
  * Renvoie 0 en cas de succès, -1 en cas d'erreur.
  */
 int thread_mutex_init(thread_mutex_t *mutex) {
-  struct tthread_mutex_t *new_mutex = TO_TTHREAD_MUTEX(mutex);
-  if (&(new_mutex->_queue_head) != NULL) {
-    ERROR("mutex already initialized");
-    return FAILED;
-  }
-  new_mutex->_lock = 0;
-  TAILQ_INIT(&(new_mutex->_queue_head));
-  return SUCCESS;
+    struct tthread_mutex_t *new_mutex = TO_TTHREAD_MUTEX(mutex);
+
+    if (&(new_mutex->_queue_head) != NULL) {
+        ERROR("mutex already initialized");
+        return FAILED;
+    }
+
+    new_mutex->_lock = 0;
+    TAILQ_INIT(&(new_mutex->_queue_head));
+
+    return SUCCESS;
 }
 
 /*
@@ -220,20 +223,25 @@ int thread_mutex_init(thread_mutex_t *mutex) {
  * verrou soit libre.
  */
 int thread_mutex_lock(thread_mutex_t *mutex) {
-  struct tthread_t_mutex_t *mutex_lock = TO_TTHREAD_MUTEX(mutex);
-  struct tthread_mutex_list_item *item = malloc(sizeof(tthread_mutex_list_item));
-  item->_thread = thread_self();
-  TAILQ_INSERT_TAIL(&(mutex_lock->_queue_head), item, _entries);
-  if (mutex_lock->_lock) {
-    //le verrou est déjà pris, attendre
-    item->_is_waiting = 1;
-    while(_is_waiting)
-      thread_yield();
-    mutex_lock->_lock = 1;
-  }
-  else
-    mutex_lock->_lock = 1;
-  return SUCCESS;
+    struct tthread_mutex_t *mutex_lock = TO_TTHREAD_MUTEX(mutex);
+    struct tthread_mutex_list_item *item = malloc(sizeof(struct tthread_mutex_list_item));
+
+    item->_thread = TO_TTHREAD(thread_self());
+    TAILQ_INSERT_TAIL(&(mutex_lock->_queue_head), item, _entries);
+
+    if (mutex_lock->_lock) {
+        //le verrou est déjà pris, attendre
+        item->_is_waiting = 1;
+        while (item->_is_waiting) {
+            thread_yield();
+        }
+
+        mutex_lock->_lock = 1;
+    } else {
+        mutex_lock->_lock = 1;
+    }
+
+    return SUCCESS;
 }
 
 
