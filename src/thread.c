@@ -267,7 +267,7 @@ int thread_mutex_unlock(thread_mutex_t *mutex) {
 
     TAILQ_REMOVE(&mutex_t->_queue_head, item, _entries);
 
-    return 0;
+    return SUCCESS;
 }
 
 int thread_mutex_destroy(thread_mutex_t *mutex) {
@@ -275,20 +275,9 @@ int thread_mutex_destroy(thread_mutex_t *mutex) {
 
     while (has_waiter(mutex_t)) {}
 
-    /* //Normalement useless, la liste doit être vide
+    free(mutex_t);
 
-    struct tthread_mutex_list_item current;
-    struct tthread_mutex_list_item next = TAILQ_FIRST(t);
-
-    do {
-        current = next;
-        next = TAILQ_NEXT(current, field);
-        destroy(current);
-    } while (next != nullptr);*/
-
-   // destroy(mutex_t);
-
-    return 0;
+    return SUCCESS;
 }
 
 void __attribute__((constructor)) premain() {

@@ -17,7 +17,6 @@ struct tthread_t *tthread_init() {
     return tthread;
 }
 
-
 void tthread_destroy(struct tthread_t *tthread) {
     destroy(tthread->_waiting_threads);
     free(tthread->_waiting_threads);
@@ -29,14 +28,12 @@ void tthread_destroy(struct tthread_t *tthread) {
     free(tthread);
 }
 
-
 int cxt_watchdog(void *args) {
     struct watchdog_args *arguments = (struct watchdog_args *) args;
     void *value = arguments->_func(arguments->_func_arg);
     thread_exit(value);
     return SUCCESS;
 }
-
 
 void tthread__end_program(void *last_address) {
     tthread_destroy(last_address);
