@@ -13,6 +13,12 @@ struct tthread_t *tthread_init() {
     tthread->_waiting_thread_nbr = 0;
     tthread->_waiting_threads = emptylist();
     tthread->_retval = NULL;
+    tthread->_priority = 1;
+
+    tthread->_timer.it_value.tv_sec = 0;
+    tthread->_timer.it_value.tv_usec = 0;
+    tthread->_timer.it_interval.tv_sec = 0;
+    tthread->_timer.it_interval.tv_usec = 0;
 
     return tthread;
 }
