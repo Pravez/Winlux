@@ -9,9 +9,20 @@
 #include "queue/o_list.h"
 #include "queue/queue.h"
 
-#define STACK_SIZE 64 * 102
+#define TO_TTHREAD_MUTEX(void_ptr) ((struct tthread_mutex_t*)void_ptr)
+#define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
+
+#define STACK_SIZE 16 * 1024
 #define SUCCESS 0
 #define FAILED -1
+
+#define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
+
+#define ERR_INVALID_THREAD -1
+#define ERR_JOIN_ITSELF -2
+#define ERR_EXISTING_JOIN -3
+
+#define TIMESLICE 100 //en ms
 
 enum TTHREAD_STATE {
     ACTIVE, SLEEPING, DEAD
@@ -30,6 +41,8 @@ struct tthread_t {
     struct itimerval _timer;
 
     struct watchdog_args *_watchdog_args;
+
+    int _kernel_id;
 
     //For memory purposes
     int _valgrind_stackid;

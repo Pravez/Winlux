@@ -4,29 +4,20 @@
 #include <unistd.h>
 #include <sched.h>
 
-#include "queue/o_queue.h"
 #include "queue/o_list.h"
 #include "thread.h"
 #include "kernel/kernel.h"
 
-#define TO_TTHREAD(void_ptr) ((struct tthread_t*)void_ptr)
-#define ERROR(msg) printf("\x1b[31;1mError:\x1b[0m %s\n", msg)
-
-#define ERR_INVALID_THREAD -1
-#define ERR_JOIN_ITSELF -2
-#define ERR_EXISTING_JOIN -3
-
-#define TIMESLICE 100 //en ms
-
 ucontext_t end_context;
 char ssp[STACK_SIZE];
+int kernel_id;
 
 
 /*
  * Récupère l'identifiant du thread courant.
  */
 thread_t thread_self(void) {
-    struct tthread_t *current = queue__first();
+    struct tthread_t *current = kwatcher__queue_first(&k_watcher, kernel_id);
     return (thread_t) current;
 }
 
@@ -65,7 +56,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     *newthread = args->_thread;
 
     // need to add the current thread to the list of waiting threads
-    queue__push_back(args->_thread);
+    kwatcher__add_thread(&k_watcher, args->_thread);
 
     /*
     add(args._thread->_context.uc_link, args._thread->_waiting_threads);
@@ -281,7 +272,10 @@ int thread_mutex_destroy(thread_mutex_t *mutex) {
 }
 
 void __attribute__((constructor)) premain() {
-    queue__init();
+
+    //Init kernel threads
+    kwatcher__init(&k_watcher);
+
     struct tthread_t *main_thread = tthread_init();
 
     int res = getcontext(&main_thread->_context);
@@ -301,23 +295,17 @@ void __attribute__((constructor)) premain() {
     end_context.uc_stack.ss_size = STACK_SIZE;
     end_context.uc_stack.ss_sp = &ssp;
 
-    queue__push_back(main_thread);
-
-    //Init kernel threads
-    CPU_ZERO(&cpu_set);
-    int avail_cpu = sysconf(_SC_NPROCESSORS_ONLN);
-    kernel_threads = malloc(sizeof(struct tthread_t_kernel_list)*avail_cpu);
-
-    for(int i=0;i<avail_cpu;i++){
-        kernel__init_queue(&kernel_threads[i], i);
-    }
+    kwatcher__add_thread(&k_watcher, main_thread);
 }
 
 
 void __attribute__((destructor)) postmain() {
-    if (queue__first() != NULL) {
-        struct tthread_t *main_thread = TO_TTHREAD(queue__pop());
-        tthread_destroy(main_thread);
+    struct tthread_t *thread;
+    for(int i = 0;i < k_watcher._taken_cpus;i++){
+        if(!kwatcher__queue_empty(&k_watcher, i)){
+            thread = kwatcher__remove_thread(&k_watcher, i);
+            tthread_destroy(thread);
+        }
     }
 }
 

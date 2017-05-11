@@ -11,7 +11,6 @@
 int func(void *arg) {
     printf("child cpu : %d\n", sched_getcpu());
     printf("Inside func.\n");
-    sleep(1);
     printf("Terminating func...\n");
 
     return 0;
@@ -27,7 +26,10 @@ int main() {
     clone(&func, child_stack+STACK_SIZE, CLONE_SIGHAND|CLONE_FS|CLONE_VM|CLONE_FILES, NULL);
     printf("Done! Thread pid: %d\n", getpid());
 
-    sleep(1);
-
     return 0;
+}
+
+void __attribute__((destructor)) postmain() {
+    printf("POSTMAIN %d\n", sched_getcpu());
+    sleep(1);
 }

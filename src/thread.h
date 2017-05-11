@@ -6,9 +6,6 @@
 #include "context.h"
 #include "queue/queue.h"
 
-#define TO_TTHREAD_MUTEX(void_ptr) ((struct tthread_mutex_t*)void_ptr)
-
-
 /* identifiant de thread
  * NB: pourra être un entier au lieu d'un pointeur si ca vous arrange,
  *     mais attention aux inconvénient des tableaux de threads
