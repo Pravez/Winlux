@@ -26,6 +26,7 @@ add_test(31-switch_many switchmany 100 10)
 add_test(32-switch_many_join switchmanyjoin 100 10)
 add_test(51-fibonacci fibonacci 20)
 add_test(61-mutex mutex)
+add_test(71-preemption preemption)
 
 target_link_libraries(main TThreads)
 target_link_libraries(switch TThreads)

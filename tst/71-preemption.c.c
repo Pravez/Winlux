@@ -20,16 +20,14 @@ thread_mutex_t mutex;
 
 static void *heavy(void *_value) {
     int add = 0;
-    for (int i = 0; i < 5000; i++) {
-        for (int j = 0; j < 5000; j++){
-            //thread_mutex_lock(&mutex);
+    for (int i = 0; i < 10000; i++) {
+        for (int j = 0; j < 10000; j++){
             final_value++;
-            //thread_mutex_unlock(&mutex);
             add++;
         }
     }
 
-    assert(add == 5000*5000);
+    assert(add == 10000*10000);
 
     thread_exit(NULL);
 }
@@ -65,11 +63,7 @@ int main(int argc, char *argv[]) {
 
     free(th);
 
-    if (final_value == (nb * 5000*5000)) {
-        printf("La somme a été correctement calculée: %d * 1000*1000 = %ld\n", nb, final_value);
-    } else {
-        printf("Le résultat est INCORRECT: %d * 1000*1000 != %ld\n", nb, final_value);
-    }
+    assert(final_value == nb*10000*10000);
 
     return 0;
 }

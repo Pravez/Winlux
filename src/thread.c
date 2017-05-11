@@ -108,18 +108,16 @@ int thread_yield(void) {
         //TODO file avec les deads
     } while (first->_state == DEAD);
 
-    int timeslice = first->_priority * TIMESLICE;
-    //We do only one iteration of the timer, only decrementing when process executes
-    first->_timer.it_value.tv_sec = 0;
-    first->_timer.it_value.tv_usec = timeslice * 1000; //Nanoseconds to milliseconds
-    first->_timer.it_interval.tv_sec = 0;
-    first->_timer.it_interval.tv_usec = timeslice * 1000;
+    if(queue__second() == NULL) {
+        int timeslice = first->_priority * TIMESLICE;
+        //We do only one iteration of the timer, only decrementing when process executes
+        first->_timer.it_value.tv_sec = 0;
+        first->_timer.it_value.tv_usec = timeslice * 1000; //Nanoseconds to milliseconds
+        first->_timer.it_interval.tv_sec = 0;
+        first->_timer.it_interval.tv_usec = timeslice * 1000;
 
-    if(first->_timer.it_value.tv_usec == 0) {
-        perror("WTF");
-        exit(1);
+        setitimer(ITIMER_VIRTUAL, &first->_timer, NULL);
     }
-    setitimer(ITIMER_VIRTUAL, &first->_timer, NULL);
 
     //Enable signals
     sigemptyset(&mask);
