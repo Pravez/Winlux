@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <valgrind/valgrind.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "queue/o_list.h"
 #include "queue/queue.h"
@@ -27,7 +28,9 @@ struct tthread_t {
 
     unsigned short int _priority;
 
-    struct itimerval _timer;
+    struct itimerspec _timerspec;
+    timer_t _timer;
+    struct sigevent _sev;
 
     struct watchdog_args *_watchdog_args;
 

@@ -13,6 +13,7 @@ add_executable(switchmany 31-switch-many.c)
 add_executable(switchmanyjoin 32-switch-many-join.c)
 add_executable(fibonacci 51-fibonacci.c)
 add_executable(mutex 61-mutex.c)
+add_executable(preemption 71-preemption.c)
 
 add_test(01-main main)
 add_test(02-switch switch)
@@ -37,4 +38,4 @@ target_link_libraries(switchmany TThreads)
 target_link_libraries(switchmanyjoin TThreads)
 target_link_libraries(fibonacci TThreads)
 target_link_libraries(mutex TThreads)
-
+target_link_libraries(preemption TThreads)

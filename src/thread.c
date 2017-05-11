@@ -1,8 +1,8 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <ucontext.h>
-#include <unistd.h>
-#include <sched.h>
+#include <time.h>
+#include <signal.h>
 
 #include "queue/o_queue.h"
 #include "queue/o_list.h"
@@ -16,7 +16,6 @@
 #define ERR_JOIN_ITSELF -2
 #define ERR_EXISTING_JOIN -3
 
-#define TIMESLICE 100 //en ms
 
 ucontext_t end_context;
 char ssp[STACK_SIZE];
@@ -56,7 +55,6 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
     args->_func = func;
     args->_func_arg = funcarg;
     args->_thread->_watchdog_args = args;
-    args->_thread->_priority = 1;
 
     //args->_thread->name = name;
 
@@ -80,7 +78,7 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 void thread_yield_handler(int signum) {
     if (signum == SIGVTALRM) {
         //Basically we only do a thread_yield
-        printf("Je suis preempte %p", thread_self());
+        //printf("Je suis preempte %p\n", thread_self());
         thread_yield();
     }
 }
@@ -109,14 +107,8 @@ int thread_yield(void) {
         //TODO file avec les deads
     } while (first->_state == DEAD);
 
-    int timeslice = first->_priority * TIMESLICE;
-
     //We do only one iteration of the timer, only decrementing when process executes
-    first->_timer.it_value.tv_sec = 0;
-    first->_timer.it_value.tv_usec = timeslice * 1000; //Nanoseconds to milliseconds
-    first->_timer.it_interval.tv_sec = 0;
-    first->_timer.it_interval.tv_usec = timeslice * 1000;
-    setitimer(ITIMER_VIRTUAL, &first->_timer, NULL);
+    timer_settime(first->_timer, 0, &first->_timerspec, NULL);
 
     //Enable signals
     sigemptyset(&mask);
@@ -180,6 +172,11 @@ int thread_join(thread_t thread, void **retval) {
  * Cette fonction ne retourne jamais.
  */
 void thread_exit(void *retval) {
+    //Disabling signals
+    sigset_t mask;
+    sigfillset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+
     struct tthread_t *current = TO_TTHREAD(queue__pop());
     current->_retval = retval; //pass function's retval to calling thread
     current->_state = DEAD;
@@ -266,6 +263,7 @@ int thread_mutex_unlock(thread_mutex_t *mutex) {
     }
 
     TAILQ_REMOVE(&mutex_t->_queue_head, item, _entries);
+    free(item);
 
     return SUCCESS;
 }
@@ -274,8 +272,9 @@ int thread_mutex_destroy(thread_mutex_t *mutex) {
     struct tthread_mutex_t *mutex_t = TO_TTHREAD_MUTEX(mutex);
 
     while (has_waiter(mutex_t)) {}
-
-    free(mutex_t);
+     mutex_t->_initialized = 0;
+    mutex_t->_lock = 0;
+    //free(mutex_t);
 
     return SUCCESS;
 }
@@ -302,15 +301,6 @@ void __attribute__((constructor)) premain() {
     end_context.uc_stack.ss_sp = &ssp;
 
     queue__push_back(main_thread);
-
-    //Init kernel threads
-    CPU_ZERO(&cpu_set);
-    int avail_cpu = sysconf(_SC_NPROCESSORS_ONLN);
-    kernel_threads = malloc(sizeof(struct tthread_t_kernel_list)*avail_cpu);
-
-    for(int i=0;i<avail_cpu;i++){
-        kernel__init_queue(&kernel_threads[i], i);
-    }
 }
 
 
