@@ -5,6 +5,7 @@
 
 #include "../context.h"
 #include "../queue/queue.h"
+#include "futex.h"
 
 
 #define KTHREAD_STACK_SIZE 64*1024
@@ -27,6 +28,8 @@ struct tthread_t_kernel_queue {
     TAILQ_HEAD(tthreads, tthread_t_kernel_item) _kernel_thread_head;
     int _tailq_size;
     pid_t _pid;
+    int _futex;
+    int _waiting;
 };
 
 struct multikernel_watcher {
@@ -40,8 +43,12 @@ int kwatcher__get_cpuid_to_add(struct multikernel_watcher* kw);
 int kwatcher__add_thread(struct multikernel_watcher* kw, struct tthread_t *thread);
 struct tthread_t* kwatcher__remove_thread(struct multikernel_watcher* kw, int kernel_queue);
 struct tthread_t* kwatcher__queue_first(struct multikernel_watcher* kw, int kernel_queue);
+struct tthread_t* kwatcher__queue_second(struct multikernel_watcher* kw, int kernel_queue);
 int kwatcher__queue_empty(struct multikernel_watcher* kw, int kernel_queue);
 int kwatcher__get_current_kernel(struct multikernel_watcher* kw);
+int* kwatcher__get_queue_futex(struct multikernel_watcher* kw, int kernel_queue);
+void kwatcher__set_waiting(struct multikernel_watcher* kw, int kernel_queue, int waiting);
+int kwatcher__is_waiting(struct multikernel_watcher* kw, int kernel_queue);
 
 struct multikernel_watcher k_watcher;
 

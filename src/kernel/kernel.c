@@ -29,6 +29,8 @@ int kwatcher__get_cpuid_to_add(struct multikernel_watcher *kw) {
             if (kw->_kernel_queues[i]._tailq_size <= min) {
                 min = kw->_kernel_queues[i]._tailq_size;
                 min_position = i;
+                if(min == 0)
+                    break;
             }
         }else{
             min_position = i;
@@ -76,6 +78,10 @@ struct tthread_t *kwatcher__queue_first(struct multikernel_watcher *kw, int kern
     return kernel__queue_first(&kw->_kernel_queues[kernel_queue]);
 }
 
+struct tthread_t *kwatcher__queue_second(struct multikernel_watcher *kw, int kernel_queue) {
+    return kernel__queue_second(&kw->_kernel_queues[kernel_queue]);
+}
+
 int kwatcher__queue_empty(struct multikernel_watcher *kw, int kernel_queue) {
     return kernel__queue_empty(&kw->_kernel_queues[kernel_queue]);
 }
@@ -91,10 +97,42 @@ int kwatcher__get_current_kernel(struct multikernel_watcher* kw){
     return -1;
 }
 
+int* kwatcher__get_queue_futex(struct multikernel_watcher* kw, int kernel_queue){
+    return &kw->_kernel_queues[kernel_queue]._futex;
+}
+
+void kwatcher__set_waiting(struct multikernel_watcher* kw, int kernel_queue, int waiting){
+    kw->_kernel_queues[kernel_queue]._waiting = waiting;
+}
+
+int kwatcher__is_waiting(struct multikernel_watcher* kw, int kernel_queue){
+    return kw->_kernel_queues[kernel_queue]._waiting;
+}
+
+int kwatcher__one_lasting(struct multikernel_watcher* kw){
+    int found_one = 0;
+    int position_found = 0;
+
+    for(int i = 0;i < kw->_taken_cpus;i++){
+        if(kw->_kernel_queues[i]._tailq_size > 1){
+            return -1;
+        }else if(kw->_kernel_queues[i]._tailq_size == 1 && !found_one){
+            found_one = 1;
+            position_found = i;
+        }else if(kw->_kernel_queues[i]._tailq_size == 1){
+            return -1;
+        }
+    }
+
+    return position_found;
+}
+
 void kernel__init_queue(struct tthread_t_kernel_queue *klist, int kernel) {
     TAILQ_INIT(&klist->_kernel_thread_head);
     klist->_kernel_id = kernel;
     klist->_tailq_size = 0;
+    klist->_futex = 0; //basically unavailable
+    klist->_waiting = 0;
 }
 
 int kernel__queue_push_back(struct tthread_t_kernel_queue *klist, struct tthread_t *thread) {
@@ -113,7 +151,7 @@ struct tthread_t *kernel__queue_pop(struct tthread_t_kernel_queue *klist) {
     struct tthread_t_kernel_item *item = TAILQ_FIRST(&klist->_kernel_thread_head);
     struct tthread_t *thread = item->thread;
     TAILQ_REMOVE(&klist->_kernel_thread_head, item, _entries);
-    free(item);
+    //free(item);
 
     klist->_tailq_size--;
 

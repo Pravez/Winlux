@@ -20,10 +20,12 @@ struct tthread_t *tthread_init() {
 void tthread_destroy(struct tthread_t *tthread) {
     destroy(tthread->_waiting_threads);
     free(tthread->_waiting_threads);
+
     if(tthread->_watchdog_args != NULL)
         free(tthread->_watchdog_args);
+
     free(tthread->_context.uc_stack.ss_sp);
-    //free(tthread->name);
+
     VALGRIND_STACK_DEREGISTER(tthread->_valgrind_stackid);
     free(tthread);
 }

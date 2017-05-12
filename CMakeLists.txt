@@ -13,5 +13,3 @@ enable_testing()
 
 add_subdirectory(src)
 add_subdirectory(tst)
-
-add_executable(thread_test testthread.c)

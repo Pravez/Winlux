@@ -91,9 +91,10 @@ int thread_yield(void) {
     struct tthread_t *first = NULL;
 
     do {
-        if (first != NULL)
-            kwatcher__add_thread(&k_watcher,
-                                 kwatcher__remove_thread(&k_watcher, kwatcher__get_current_kernel(&k_watcher)));
+        if (first != NULL){
+            first = kwatcher__remove_thread(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
+            kwatcher__add_thread(&k_watcher, first);
+        }
 
         first = kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
         //TODO file avec les deads
@@ -150,7 +151,13 @@ int thread_join(thread_t thread, void **retval) {
         self->_state = SLEEPING;
         add(self, tthread->_waiting_threads);
 
-        thread_yield(); //give the hand
+        if(kwatcher__queue_second(&k_watcher, kwatcher__get_current_kernel(&k_watcher)) != NULL){
+            thread_yield(); //give the hand
+        }else{
+            //Waiting to be woke up
+            kwatcher__set_waiting(&k_watcher, kwatcher__get_current_kernel(&k_watcher), 1);
+            futex__wait(kwatcher__get_queue_futex(&k_watcher, kwatcher__get_current_kernel(&k_watcher)));
+        }
 
         delete(self, tthread->_waiting_threads);
         tthread->_waiting_thread_nbr--;
@@ -176,13 +183,22 @@ void thread_exit(void *retval) {
     current->_state = DEAD;
 
     struct node *current_node = current->_waiting_threads->head;
+    struct tthread_t* current_node_tthread;
     while (current_node != NULL) {
-        ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
-        kwatcher__add_thread(&k_watcher, current_node->data);
+        current_node_tthread = (struct tthread_t*) current_node->data;
+        current_node_tthread->_state = ACTIVE;
+        if(kwatcher__is_waiting(&k_watcher, current_node_tthread->_kernel_id)){
+            kwatcher__set_waiting(&k_watcher, current_node_tthread->_kernel_id, 0);
+            futex__post(kwatcher__get_queue_futex(&k_watcher, current_node_tthread->_kernel_id));
+        }else {
+            kwatcher__add_thread(&k_watcher, current_node->data);
+        }
+
         current_node = current_node->next;
     }
 
     if (kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher)) == NULL) {
+
         makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
         swapcontext(&current->_context, &end_context);
     } else {
