@@ -10,6 +10,9 @@ void kwatcher__init(struct multikernel_watcher *kw) {
     available_cpus = (int) sysconf(_SC_NPROCESSORS_ONLN);
     kw->_taken_cpus = 0;
     kw->_kernel_queues = malloc(sizeof(struct tthread_t_kernel_queue) * available_cpus);
+    kw->_premain_initialized = 0;
+
+    signal(SIGCHLD, SIG_IGN);
 
     for (int i = 0; i < available_cpus; i++) {
         kernel__init_queue(&kw->_kernel_queues[i], i);
@@ -21,10 +24,15 @@ int kwatcher__get_cpuid_to_add(struct multikernel_watcher *kw) {
     int min_position = 0;
 
 
-    for (int i = 0; i < kw->_taken_cpus; i++) {
-        if (kw->_kernel_queues[i]._tailq_size < min) {
-            min = kw->_kernel_queues[i]._tailq_size;
+    for (int i = 0; i < available_cpus; i++) {
+        if(i < kw->_taken_cpus) {
+            if (kw->_kernel_queues[i]._tailq_size <= min) {
+                min = kw->_kernel_queues[i]._tailq_size;
+                min_position = i;
+            }
+        }else{
             min_position = i;
+            break;
         }
     }
 
@@ -32,8 +40,10 @@ int kwatcher__get_cpuid_to_add(struct multikernel_watcher *kw) {
 }
 
 int k_launcher(void *arg) {
-    struct tthread_t *thread = TO_TTHREAD(arg);
-    setcontext(&thread->_context);
+    struct tthread_t_kernel_queue* kqueue = (struct tthread_t_kernel_queue*) arg;
+    kqueue->_pid = getpid();
+
+    setcontext(&kwatcher__queue_first(&k_watcher, kqueue->_kernel_id)->_context);
 
     return 1;
 }
@@ -43,14 +53,16 @@ int kwatcher__add_thread(struct multikernel_watcher *kw, struct tthread_t *threa
     int retval = kernel__queue_push_back(&kw->_kernel_queues[cpu], thread);
 
     //If we added on a new kernel list, we clone to create a new real thread
-    if (cpu == kw->_taken_cpus) {
+    if (cpu == kw->_taken_cpus && kw->_premain_initialized) {
         kw->_taken_cpus++;
         void *new_stack = malloc(KTHREAD_STACK_SIZE);
-        int clone_val = clone(k_launcher, new_stack, CLONE_FS | CLONE_VM | CLONE_FILES,
-                              &kernel__queue_first(&kw->_kernel_queues[cpu])->_context);
+        int clone_val = clone(k_launcher, new_stack, CLONE_FS | CLONE_VM | CLONE_FILES | CLONE_SIGHAND | CLONE_IO,
+                              &kw->_kernel_queues[cpu]);
         if (clone_val == FAILED) {
             ERROR("impossible to clone");
         }
+    }else if(!kw->_premain_initialized){
+        kw->_taken_cpus++;
     }
 
     return retval;
@@ -66,6 +78,17 @@ struct tthread_t *kwatcher__queue_first(struct multikernel_watcher *kw, int kern
 
 int kwatcher__queue_empty(struct multikernel_watcher *kw, int kernel_queue) {
     return kernel__queue_empty(&kw->_kernel_queues[kernel_queue]);
+}
+
+int kwatcher__get_current_kernel(struct multikernel_watcher* kw){
+    pid_t pid = getpid();
+    for(int i=0;i < kw->_taken_cpus;i++){
+        if(kw->_kernel_queues[i]._pid == pid)
+            return i;
+    }
+
+    ERROR("pid not found");
+    return -1;
 }
 
 void kernel__init_queue(struct tthread_t_kernel_queue *klist, int kernel) {

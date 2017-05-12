@@ -26,10 +26,12 @@ struct tthread_t_kernel_queue {
     int _kernel_id;
     TAILQ_HEAD(tthreads, tthread_t_kernel_item) _kernel_thread_head;
     int _tailq_size;
+    pid_t _pid;
 };
 
 struct multikernel_watcher {
     int _taken_cpus;
+    int _premain_initialized;
     struct tthread_t_kernel_queue* _kernel_queues;
 };
 
@@ -39,6 +41,7 @@ int kwatcher__add_thread(struct multikernel_watcher* kw, struct tthread_t *threa
 struct tthread_t* kwatcher__remove_thread(struct multikernel_watcher* kw, int kernel_queue);
 struct tthread_t* kwatcher__queue_first(struct multikernel_watcher* kw, int kernel_queue);
 int kwatcher__queue_empty(struct multikernel_watcher* kw, int kernel_queue);
+int kwatcher__get_current_kernel(struct multikernel_watcher* kw);
 
 struct multikernel_watcher k_watcher;
 

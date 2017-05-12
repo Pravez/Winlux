@@ -20,10 +20,12 @@ static void *threadfunc(void *arg) {
     printf("je suis encore le thread %p, lancé avec l'argument %s\n",
            (void *) thread_self(), name);*/
 
-    thread_mutex_lock(&mutex);
+    /*thread_mutex_lock(&mutex);
     thread_yield();
     final_value += 1;
-    thread_mutex_unlock(&mutex);
+    thread_mutex_unlock(&mutex);*/
+
+    printf("Je suis le fils (%d)\n", getpid());
 
     thread_exit(arg);
 }
@@ -50,7 +52,7 @@ int main(int argc, char *argv[]) {
     printf("les threads ont terminé en renvoyant '%s' and '%s'\n",
            (char *) retval1, (char *) retval2);*/
 
-    thread_mutex_init(&mutex);
+    /*thread_mutex_init(&mutex);
 
     thread_t threads[10];
 
@@ -67,8 +69,15 @@ int main(int argc, char *argv[]) {
     cpu_set_t set;
 
     CPU_ZERO(&set);
-    printf("%ld\n", sysconf(_SC_NPROCESSORS_ONLN));
+    printf("%ld\n", sysconf(_SC_NPROCESSORS_ONLN));*/
 
+    thread_t thread;
+    thread_create(&thread, threadfunc, NULL);
+
+    thread_join(thread, NULL);
+
+    sleep(1);
+    printf("Je suis le pere (%d)\n", getpid());
 
     return 0;
 }

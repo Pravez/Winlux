@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+
 #include <stdio.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -10,14 +11,12 @@
 
 ucontext_t end_context;
 char ssp[STACK_SIZE];
-int kernel_id;
-
 
 /*
  * Récupère l'identifiant du thread courant.
  */
 thread_t thread_self(void) {
-    struct tthread_t *current = kwatcher__queue_first(&k_watcher, kernel_id);
+    struct tthread_t *current = kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
     return (thread_t) current;
 }
 
@@ -71,7 +70,6 @@ int thread_create(thread_t *newthread, void *(*func)(void *), void *funcarg) {
 void thread_yield_handler(int signum) {
     if (signum == SIGVTALRM) {
         //Basically we only do a thread_yield
-        printf("Je suis preempte %p", thread_self());
         thread_yield();
     }
 }
@@ -85,18 +83,19 @@ int thread_yield(void) {
     sigfillset(&mask);
     sigprocmask(SIG_SETMASK, &mask, NULL);
 
-    struct tthread_t *actual = queue__pop();
+    struct tthread_t *actual = kwatcher__remove_thread(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
 
     if (actual->_state != SLEEPING)
-        queue__push_back(actual);
+        kwatcher__add_thread(&k_watcher, actual);
 
     struct tthread_t *first = NULL;
 
     do {
         if (first != NULL)
-            queue__push_back(queue__pop());
+            kwatcher__add_thread(&k_watcher,
+                                 kwatcher__remove_thread(&k_watcher, kwatcher__get_current_kernel(&k_watcher)));
 
-        first = TO_TTHREAD(queue__first());
+        first = kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
         //TODO file avec les deads
     } while (first->_state == DEAD);
 
@@ -131,7 +130,7 @@ int thread_join(thread_t thread, void **retval) {
         ERROR("thread doesn't exist in thread_join");
         return ERR_INVALID_THREAD;
     }
-    if (thread == queue__first()) {
+    if (thread == kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher))) {
         ERROR("try to wait itself, forbidden");
         return ERR_JOIN_ITSELF;
     }
@@ -139,7 +138,8 @@ int thread_join(thread_t thread, void **retval) {
     struct tthread_t *tthread = TO_TTHREAD(thread);
     struct tthread_t *self = TO_TTHREAD(thread_self());
 
-    if (find(TO_TTHREAD(queue__first())->_waiting_threads, thread) == 0) {
+    if (find(kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher))->_waiting_threads,
+             thread) == 0) {
         ERROR("another thread is already waiting for this thread, can't wait it");
         return ERR_EXISTING_JOIN;
     }
@@ -171,23 +171,24 @@ int thread_join(thread_t thread, void **retval) {
  * Cette fonction ne retourne jamais.
  */
 void thread_exit(void *retval) {
-    struct tthread_t *current = TO_TTHREAD(queue__pop());
+    struct tthread_t *current = kwatcher__remove_thread(&k_watcher, kwatcher__get_current_kernel(&k_watcher));
     current->_retval = retval; //pass function's retval to calling thread
     current->_state = DEAD;
 
     struct node *current_node = current->_waiting_threads->head;
     while (current_node != NULL) {
         ((struct tthread_t *) (current_node->data))->_state = ACTIVE;
-        queue__push_back(current_node->data);
+        kwatcher__add_thread(&k_watcher, current_node->data);
         current_node = current_node->next;
     }
 
-    if (queue__first() == NULL) {
+    if (kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(&k_watcher)) == NULL) {
         makecontext(&end_context, (void (*)(void)) tthread__end_program, 1, current);
         swapcontext(&current->_context, &end_context);
     } else {
-        swapcontext(&current->_context, &(TO_TTHREAD(
-                queue__first()))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
+        swapcontext(&current->_context, &(
+                kwatcher__queue_first(&k_watcher, kwatcher__get_current_kernel(
+                        &k_watcher)))->_context); //TODO : Pas forcément le premier de la queue mais chercher le premier qui est ACTIF ?
     }
 
     while (1);
@@ -226,13 +227,13 @@ int thread_mutex_lock(thread_mutex_t *mutex) {
     if (mutex_lock->_lock) {
         //le verrou est déjà pris, attendre, à ce moment là on se position en fin de queue
         TAILQ_INSERT_TAIL(&(mutex_lock->_queue_head), item, _entries);
-        while(mutex_lock->_lock) {
+        while (mutex_lock->_lock) {
             item->_is_waiting = 1;
             while (item->_is_waiting) {
                 thread_yield();
             }
         }
-    }else{
+    } else {
         //S'il n'est pas pris, on se position en début de queue
         TAILQ_INSERT_HEAD(&(mutex_lock->_queue_head), item, _entries);
     }
@@ -250,8 +251,8 @@ int thread_mutex_unlock(thread_mutex_t *mutex) {
     struct tthread_mutex_t *mutex_t = TO_TTHREAD_MUTEX(mutex);
 
     mutex_t->_lock = 0;
-    struct tthread_mutex_list_item* item = TAILQ_FIRST(&mutex_t->_queue_head);
-    struct tthread_mutex_list_item* next = TAILQ_NEXT(item, _entries);
+    struct tthread_mutex_list_item *item = TAILQ_FIRST(&mutex_t->_queue_head);
+    struct tthread_mutex_list_item *next = TAILQ_NEXT(item, _entries);
     if (next != NULL) {
         next->_is_waiting = 0;
     }
@@ -296,17 +297,24 @@ void __attribute__((constructor)) premain() {
     end_context.uc_stack.ss_sp = &ssp;
 
     kwatcher__add_thread(&k_watcher, main_thread);
+    k_watcher._premain_initialized = 1;
+    k_watcher._kernel_queues[0]._pid = getpid();
 }
 
 
 void __attribute__((destructor)) postmain() {
+    int main_was_last = 0;
     struct tthread_t *thread;
-    for(int i = 0;i < k_watcher._taken_cpus;i++){
-        if(!kwatcher__queue_empty(&k_watcher, i)){
+    for (int i = 0; i < k_watcher._taken_cpus; i++) {
+        if (!kwatcher__queue_empty(&k_watcher, i)) {
             thread = kwatcher__remove_thread(&k_watcher, i);
             tthread_destroy(thread);
+            main_was_last = 1;
         }
     }
+
+    if (main_was_last)
+        free(k_watcher._kernel_queues);
 }
 
 //postmain_watchdog_args
